@@ -2,6 +2,11 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.13
+
+- **Eigentliche Ursache für die Farbabweichung zu Samsung gefunden**: Die App hat bisher Androids "Material You"-Farbsystem genutzt, das Grautöne (u. a. die Hervorhebung in der unteren Navigationsleiste) nach dem Hintergrundbild des Handys einfärbt. Samsungs eigene Apps (z. B. Wallet) machen das nicht — die nutzen feste, neutrale Grautöne unabhängig vom Hintergrundbild. Die App tut das jetzt auch, wodurch Farben durchgehend näher an Samsungs eigenem Look liegen sollten, nicht nur in der Navigationsleiste.
+- **Hervorhebung in der Navigationsleiste kontrastreicher**: Der helle Hintergrund hinter dem aktiven Tab ("Woche"/"Tag") hebt sich jetzt deutlicher ab, ähnlich wie in Samsung Wallet.
+
 ## Version 1.0.12
 
 - **Update-Installation zuverlässiger gemacht**: Google Play Protect hat die App zuletzt als "möglicherweise schädlich" blockiert, weil sie selbst eine neue Version heruntergeladen und installiert hat — ein Verhalten, das Play Protect grundsätzlich misstrauisch macht, egal wie harmlos die App tatsächlich ist. "Update herunterladen" öffnet jetzt stattdessen den Browser, der die Installation übernimmt — von dort aus sollte es nicht mehr blockiert werden.

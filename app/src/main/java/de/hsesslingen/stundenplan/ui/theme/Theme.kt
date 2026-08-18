@@ -45,7 +45,13 @@ private val OneUiLightColorScheme = lightColorScheme(
 @Composable
 fun StundenplanTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    // Samsung's own first-party apps (Wallet, Phone, Gallery, …) don't tint their neutral
+    // surfaces/chrome by wallpaper — bottom-nav bars, dividers etc. stay a fixed, achromatic gray
+    // regardless of Material You. Defaulting to Android's wallpaper-tinted dynamic color here was
+    // exactly why the bottom nav's "neutral gray" highlight never quite matched Samsung's own
+    // (it was picking up a color cast from the device wallpaper); OneUiDarkColorScheme/
+    // OneUiLightColorScheme below are the actual neutral One UI palette.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current

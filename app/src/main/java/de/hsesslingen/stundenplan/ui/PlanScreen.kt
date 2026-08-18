@@ -537,8 +537,11 @@ private fun BottomNavPill(
 
 @Composable
 private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    // A flat white-alpha overlay (not a theme surface token) so the highlight is a guaranteed
+    // neutral gray, clearly lighter than the frosted bar behind it — matching how visibly the
+    // selected pill in Samsung Wallet's own nav bar stands out from its surroundings.
     val bg by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f) else Color.Transparent,
+        if (selected) Color.White.copy(alpha = 0.18f) else Color.Transparent,
         animationSpec = tween(PILL_ANIM_MS),
         label = "navItemBg",
     )
