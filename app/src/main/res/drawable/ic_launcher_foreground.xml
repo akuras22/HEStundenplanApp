@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Binder rings -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43,20 A5,5 0 0 1 48,25 V31 A5,5 0 0 1 43,36 A5,5 0 0 1 38,31 V25 A5,5 0 0 1 43,20 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M65,20 A5,5 0 0 1 70,25 V31 A5,5 0 0 1 65,36 A5,5 0 0 1 60,31 V25 A5,5 0 0 1 65,20 Z" />
+    <!-- Calendar card -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,28 H74 A10,10 0 0 1 84,38 V70 A10,10 0 0 1 74,80 H34 A10,10 0 0 1 24,70 V38 A10,10 0 0 1 34,28 Z" />
+    <!-- Header band -->
+    <path
+        android:fillColor="#FF8A5B"
+        android:pathData="M34,28 H74 A10,10 0 0 1 84,38 V42 H24 V38 A10,10 0 0 1 34,28 Z" />
+    <!-- Day grid, one cell highlighted -->
+    <path android:fillColor="#DCE3F7" android:pathData="M30,46 h13 v13 h-13 z" />
+    <path android:fillColor="#8C6FFF" android:pathData="M47,46 h13 v13 h-13 z" />
+    <path android:fillColor="#DCE3F7" android:pathData="M64,46 h14 v13 h-14 z" />
+    <path android:fillColor="#DCE3F7" android:pathData="M30,63 h13 v13 h-13 z" />
+    <path android:fillColor="#DCE3F7" android:pathData="M47,63 h13 v13 h-13 z" />
+    <path android:fillColor="#DCE3F7" android:pathData="M64,63 h14 v13 h-14 z" />
+</vector>
