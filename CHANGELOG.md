@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.14
+
+- **Absturz beim Update behoben**: Ein Tipp auf "Update herunterladen" hat die App zum Absturz gebracht, statt den Browser zu öffnen. Behoben.
+
 ## Version 1.0.13
 
 - **Eigentliche Ursache für die Farbabweichung zu Samsung gefunden**: Die App hat bisher Androids "Material You"-Farbsystem genutzt, das Grautöne (u. a. die Hervorhebung in der unteren Navigationsleiste) nach dem Hintergrundbild des Handys einfärbt. Samsungs eigene Apps (z. B. Wallet) machen das nicht — die nutzen feste, neutrale Grautöne unabhängig vom Hintergrundbild. Die App tut das jetzt auch, wodurch Farben durchgehend näher an Samsungs eigenem Look liegen sollten, nicht nur in der Navigationsleiste.

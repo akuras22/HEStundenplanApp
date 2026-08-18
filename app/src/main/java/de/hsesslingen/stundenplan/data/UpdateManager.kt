@@ -71,6 +71,11 @@ class UpdateManager(
      * normal "Downloads > tap to install" flow from there.
      */
     fun openDownloadInBrowser(update: UpdateInfo) {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl)))
+        // UpdateManager is constructed with the Application context (not an Activity), so
+        // startActivity() requires FLAG_ACTIVITY_NEW_TASK — without it this throws
+        // AndroidRuntimeException at the tap that's supposed to open the browser.
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
     }
 }
