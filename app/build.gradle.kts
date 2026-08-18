@@ -20,9 +20,29 @@ android {
         buildConfigField("String", "GITHUB_REPO", "\"${System.getenv("GITHUB_REPOSITORY") ?: "akuras22/HEStundenplanApp"}\"")
     }
 
+    // OTA updates only install over an existing app if the new APK's signature matches exactly, so
+    // every release build (local or CI) must be signed with the same fixed key — never the
+    // debug keystore, which CI runners regenerate fresh on every run. The key itself lives outside
+    // the repo (RELEASE_KEYSTORE_PATH etc. are only ever set via env vars / CI secrets, never
+    // committed) — see .github/workflows/release.yml.
+    val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+    signingConfigs {
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
