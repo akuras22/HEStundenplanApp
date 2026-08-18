@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.10
+
+- **Gitternetz zurückgesetzt, dafür markiert wo eine Veranstaltung genau beginnt**: Die generell hellere Gitternetz-Optik aus Version 1.0.9 wurde wieder zurückgenommen (war anders gemeint) — stattdessen gibt es jetzt genau an den Stellen, wo eine Veranstaltung nicht zur vollen Stunde beginnt (z. B. 11:10 Uhr), eine eigene farbige Linie quer durch die Ansicht, passend zur Uhrzeit links.
+
 ## Version 1.0.9
 
 - **Gitternetz deutlich sichtbarer**: Die Linien für Stunden und Tage in der Wochen- und Tagesansicht waren kaum zu erkennen. Jetzt ist auf einen Blick klar, wo eine Stunde beginnt und wo ein Tag endet.

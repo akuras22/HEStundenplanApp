@@ -724,13 +724,21 @@ private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCod
         val vScroll = rememberScrollState()
         Column(Modifier.fillMaxWidth().verticalScroll(vScroll)) {
         Box(Modifier.fillMaxWidth()) {
-            GridLines(dayStart = dayStart, dayEnd = dayEnd, totalHeight = totalHeight, columnWidth = columnWidth, dayCount = 1)
+            val extraStartMinutes = dayEvents.map { it.startMinutes }.toSet()
+            GridLines(
+                dayStart = dayStart,
+                dayEnd = dayEnd,
+                totalHeight = totalHeight,
+                columnWidth = columnWidth,
+                dayCount = 1,
+                extraStartMinutes = extraStartMinutes,
+            )
             Row(Modifier.fillMaxWidth()) {
                 TimeAxis(
                     dayStart = dayStart,
                     dayEnd = dayEnd,
                     totalHeight = totalHeight,
-                    extraStartMinutes = dayEvents.map { it.startMinutes }.toSet(),
+                    extraStartMinutes = extraStartMinutes,
                 )
                 Box(Modifier.width(columnWidth).height(totalHeight)) {
                     if (date == LocalDate.now()) {
@@ -995,13 +1003,20 @@ private fun WeekGrid(
                 .verticalScroll(vScroll),
         ) {
         Box(Modifier.fillMaxWidth()) {
-            GridLines(dayStart = dayStart, dayEnd = dayEnd, totalHeight = totalHeight, columnWidth = columnWidth)
+            val extraStartMinutes = allVisible.map { it.startMinutes }.toSet()
+            GridLines(
+                dayStart = dayStart,
+                dayEnd = dayEnd,
+                totalHeight = totalHeight,
+                columnWidth = columnWidth,
+                extraStartMinutes = extraStartMinutes,
+            )
             Row(Modifier.fillMaxWidth()) {
                 TimeAxis(
                     dayStart = dayStart,
                     dayEnd = dayEnd,
                     totalHeight = totalHeight,
-                    extraStartMinutes = allVisible.map { it.startMinutes }.toSet(),
+                    extraStartMinutes = extraStartMinutes,
                 )
                 Weekday.entries.forEach { day ->
                     val date = monday.plusDays(day.ordinal.toLong())
@@ -1069,14 +1084,20 @@ private fun DateChip(
 }
 
 @Composable
-private fun GridLines(dayStart: Int, dayEnd: Int, totalHeight: Dp, columnWidth: Dp, dayCount: Int = 5) {
-    // The old 0.08 alpha + 1px hair-line was essentially invisible against pure black — bumped up
-    // (and drawn at a real 1.dp stroke instead of 1 raw pixel, which shrinks to nothing on
-    // high-density screens) so the grid actually reads as a grid.
-    val hourLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
-    val dayLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)
+private fun GridLines(
+    dayStart: Int,
+    dayEnd: Int,
+    totalHeight: Dp,
+    columnWidth: Dp,
+    dayCount: Int = 5,
+    extraStartMinutes: Set<Int> = emptySet(),
+) {
+    val lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    // Same extra start times TimeAxis labels (e.g. 11:10) get their own highlighted line here too,
+    // in the event's own accent color, so the "starts here, not on the hour" mark is visible across
+    // the whole row, not just as a label off to the side.
+    val extraLineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
     val hourCount = (dayEnd - dayStart) / 60
-    val strokePx = with(LocalDensity.current) { 1.dp.toPx() }
     Canvas(Modifier.fillMaxWidth().height(totalHeight)) {
         val axisPx = TIME_AXIS_WIDTH.toPx()
         val colPx = columnWidth.toPx()
@@ -1084,12 +1105,18 @@ private fun GridLines(dayStart: Int, dayEnd: Int, totalHeight: Dp, columnWidth: 
         // Horizontal hour lines.
         for (i in 0..hourCount) {
             val y = size.height * i / hourCount
-            drawLine(hourLineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = strokePx)
+            drawLine(lineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = 1f)
         }
         // Vertical day separators.
         for (i in 0..dayCount) {
             val x = axisPx + colPx * i
-            drawLine(dayLineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = strokePx)
+            drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+        }
+        // Extra lines for event start times that don't land on the hour.
+        for (minute in extraStartMinutes) {
+            if (minute % 60 == 0 || minute !in dayStart..dayEnd) continue
+            val y = size.height * (minute - dayStart) / (dayEnd - dayStart)
+            drawLine(extraLineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = 1.5f)
         }
     }
 }
