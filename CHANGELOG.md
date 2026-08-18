@@ -2,6 +2,11 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.12
+
+- **Update-Installation zuverlässiger gemacht**: Google Play Protect hat die App zuletzt als "möglicherweise schädlich" blockiert, weil sie selbst eine neue Version heruntergeladen und installiert hat — ein Verhalten, das Play Protect grundsätzlich misstrauisch macht, egal wie harmlos die App tatsächlich ist. "Update herunterladen" öffnet jetzt stattdessen den Browser, der die Installation übernimmt — von dort aus sollte es nicht mehr blockiert werden.
+- **Untere Navigationsleiste noch genauer an Samsung angeglichen**: "Woche"/"Tag" sehen jetzt 1:1 wie die Leiste in Samsung Wallet aus, inklusive des dezenten hellen Hintergrunds hinter dem aktiven Tab.
+
 ## Version 1.0.11
 
 - **Gitternetz im Untis-Stil**: Die Linien für Stunden und Tage sind jetzt deutlich kräftiger und wirken wie ein echtes Raster, ähnlich wie man es aus Untis kennt. Die Markierungslinie für Veranstaltungen, die nicht zur vollen Stunde beginnen, ist jetzt gestrichelt statt farbig — passt sich damit ins Raster ein, statt wie ein separater bunter Hinweis zu wirken.

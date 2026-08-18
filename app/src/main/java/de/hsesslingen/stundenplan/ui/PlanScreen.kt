@@ -52,7 +52,6 @@ import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -77,7 +76,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -288,7 +286,6 @@ private fun GlassIconButton(icon: ImageVector, contentDescription: String, onCli
 fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     val state by viewModel.planState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
-    val context = LocalContext.current
     var viewMode by remember { mutableStateOf(PlanViewMode.WEEK) }
     var selectedDate by remember { mutableStateOf(LocalDate.now().nearestWeekday()) }
     var selectedEvent by remember { mutableStateOf<TimetableEvent?>(null) }
@@ -457,11 +454,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     updateState.available?.let { info ->
         UpdateDialog(
             info = info,
-            downloadProgress = updateState.downloadProgress,
-            error = updateState.error,
-            canInstall = viewModel.canRequestInstall(),
-            onInstall = { viewModel.downloadAndInstallUpdate() },
-            onOpenInstallSettings = { context.startActivity(viewModel.requestInstallPermissionIntent()) },
+            onInstall = { viewModel.openUpdateInBrowser() },
             onDismiss = { viewModel.dismissUpdate() },
         )
     }
@@ -512,7 +505,13 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     }
 }
 
-/** Floating pill bottom-nav bar, Samsung One UI style (à la Galaxy Store / Gallery / Contacts). */
+/**
+ * Floating pill bottom-nav bar, modeled 1:1 on the Samsung Wallet bottom bar ("Schnellzugriff" /
+ * "Alle"): a wrap-content frosted-glass stadium container with a small inset padding, inside which
+ * only the SELECTED item gets its own brighter, slightly smaller stadium behind it — unselected
+ * items sit directly on the outer glass with no background of their own. Items size to their own
+ * content (not a shared fixed width), same as the reference.
+ */
 @Composable
 private fun BottomNavPill(
     selected: PlanViewMode,
@@ -520,37 +519,42 @@ private fun BottomNavPill(
     hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
-    // Matched to the actual first-party bars (Phone/Gallery/Galaxy Store): a contiguous segmented
-    // strip with no gaps between items and no background highlight on the active one — the active
-    // tab is only distinguished by brighter icon/text color and slightly heavier weight, exactly
-    // like "Tastatur" in the Phone app or "Bilder" in Gallery.
     Row(
         modifier
             .clip(PillShape)
-            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin()),
+            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
+            .padding(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        BottomNavItem(Icons.Filled.ViewWeek, "Woche", selected == PlanViewMode.WEEK, Modifier.width(100.dp)) {
+        BottomNavItem(Icons.Filled.ViewWeek, "Woche", selected == PlanViewMode.WEEK) {
             onSelect(PlanViewMode.WEEK)
         }
-        BottomNavItem(Icons.Filled.ViewDay, "Tag", selected == PlanViewMode.DAY, Modifier.width(100.dp)) {
+        BottomNavItem(Icons.Filled.ViewDay, "Tag", selected == PlanViewMode.DAY) {
             onSelect(PlanViewMode.DAY)
         }
     }
 }
 
 @Composable
-private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    val bg by animateColorAsState(
+        if (selected) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f) else Color.Transparent,
+        animationSpec = tween(PILL_ANIM_MS),
+        label = "navItemBg",
+    )
     val fg by animateColorAsState(
         if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(PILL_ANIM_MS),
         label = "navItemFg",
     )
     Column(
-        modifier
+        Modifier
+            .clip(PillShape)
+            .background(bg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 22.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(24.dp))
         Text(
@@ -558,7 +562,7 @@ private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, m
             fontSize = 13.sp,
             lineHeight = 15.sp,
             color = fg,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
     }
 }
@@ -1296,28 +1300,23 @@ private fun renderReleaseNotesMarkdown(markdown: String): AnnotatedString = buil
     }
 }
 
-/** OTA update prompt — download progress replaces the action buttons mid-download so there's
- *  no way to dismiss or double-trigger a download that's already running. */
+/** OTA update prompt — tapping "Update herunterladen" opens the browser rather than downloading
+ *  and installing the APK ourselves (see [UpdateManager.openDownloadInBrowser] for why). */
 @Composable
 private fun UpdateDialog(
     info: UpdateInfo,
-    downloadProgress: Float?,
-    error: String?,
-    canInstall: Boolean,
     onInstall: () -> Unit,
-    onOpenInstallSettings: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val downloading = downloadProgress != null
     AlertDialog(
-        onDismissRequest = { if (!downloading) onDismiss() },
+        onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = { if (canInstall) onInstall() else onOpenInstallSettings() }, enabled = !downloading) {
-                Text(if (canInstall) "Update installieren" else "Berechtigung erteilen", fontWeight = FontWeight.Bold)
+            TextButton(onClick = onInstall) {
+                Text("Update herunterladen", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            if (!downloading) TextButton(onClick = onDismiss) { Text("Später") }
+            TextButton(onClick = onDismiss) { Text("Später") }
         },
         shape = MaterialTheme.shapes.extraLarge,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -1329,21 +1328,11 @@ private fun UpdateDialog(
                     Text(renderReleaseNotesMarkdown(info.releaseNotes), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(12.dp))
                 }
-                if (!canInstall) {
-                    Text(
-                        "Android verlangt einmalig die Erlaubnis, Apps aus dieser App heraus zu installieren.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                downloadProgress?.let { progress ->
-                    Spacer(Modifier.height(12.dp))
-                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-                }
-                error?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-                }
+                Text(
+                    "Öffnet die Download-Seite im Browser — von dort aus einmal antippen, um die neue Version zu installieren.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )

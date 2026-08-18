@@ -3,7 +3,6 @@ package de.hsesslingen.stundenplan.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import android.content.Intent
 import de.hsesslingen.stundenplan.data.QisRepository
 import de.hsesslingen.stundenplan.data.SettingsStore
 import de.hsesslingen.stundenplan.data.Studiengang
@@ -27,8 +26,6 @@ data class PlanUiState(
 
 data class UpdateUiState(
     val available: UpdateInfo? = null,
-    val downloadProgress: Float? = null,
-    val error: String? = null,
 )
 
 data class StudiengangPickerState(
@@ -84,32 +81,14 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun downloadAndInstallUpdate() {
+    fun openUpdateInBrowser() {
         val info = _updateState.value.available ?: return
-        viewModelScope.launch {
-            _updateState.value = _updateState.value.copy(downloadProgress = 0f, error = null)
-            try {
-                val file = updateManager.download(info) { progress ->
-                    _updateState.value = _updateState.value.copy(downloadProgress = progress)
-                }
-                _updateState.value = _updateState.value.copy(downloadProgress = null)
-                updateManager.install(file)
-            } catch (e: Exception) {
-                _updateState.value = _updateState.value.copy(
-                    downloadProgress = null,
-                    error = e.message ?: "Update konnte nicht heruntergeladen werden.",
-                )
-            }
-        }
+        updateManager.openDownloadInBrowser(info)
     }
 
     fun dismissUpdate() {
         _updateState.value = _updateState.value.copy(available = null)
     }
-
-    fun canRequestInstall(): Boolean = updateManager.canRequestInstall()
-
-    fun requestInstallPermissionIntent(): Intent = updateManager.requestInstallPermissionIntent()
 
     /** Loads (or serves from cache) the real timetable for the week starting on [weekMonday]. */
     fun loadWeek(weekMonday: LocalDate) {
