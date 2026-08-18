@@ -17,6 +17,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -95,7 +96,6 @@ import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.Weekday
 import de.hsesslingen.stundenplan.ui.theme.PillShape
-import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -291,7 +291,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     var selectedEvent by remember { mutableStateOf<TimetableEvent?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     val headerHaze = rememberHazeState()
-    val navHaze = rememberHazeState()
 
     // The site serves real per-week data (empty outside term dates, room changes, cancellations),
     // not a recurring template, so every week the user swipes to needs its own live fetch.
@@ -352,8 +351,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                 Box(
                     Modifier
                         .weight(1f)
-                        .fillMaxWidth()
-                        .hazeSource(state = navHaze),
+                        .fillMaxWidth(),
                 ) {
                     when {
                         state.studiengang == null && !state.isLoading -> EmptyState(onOpenSettings)
@@ -439,7 +437,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
             BottomNavPill(
                 selected = viewMode,
                 onSelect = { viewMode = it },
-                hazeState = navHaze,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 20.dp, vertical = 20.dp),
@@ -505,25 +502,31 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     }
 }
 
-/**
- * Floating pill bottom-nav bar, modeled 1:1 on the Samsung Wallet bottom bar ("Schnellzugriff" /
- * "Alle"): a wrap-content frosted-glass stadium container with a small inset padding, inside which
- * only the SELECTED item gets its own brighter, slightly smaller stadium behind it — unselected
- * items sit directly on the outer glass with no background of their own. Items size to their own
- * content (not a shared fixed width), same as the reference.
- */
+// Sourced from the reverse-engineered OneUI design library (github.com/tribalfs/oneui-design),
+// drawable/oui_des_rounded_tab_background_selected.xml + values-night/colors.xml — Samsung's real
+// "RoundedTabLayout" segmented control, which is what a 2-way view-mode switcher like Woche/Tag
+// actually is in OneUI terms (not a top-level nav bar like Wallet's tab bar, which is a different
+// component). It's flat solid colors, not a blur: track background #47474a (dark)/#e4e4e7 (light),
+// selected pill filled with colorPrimary, selected text #fafaff, unselected text #a3a3a7.
+private val RoundedTabTrackColorDark = Color(0xFF47474A)
+private val RoundedTabTrackColorLight = Color(0xFFE4E4E7)
+private val RoundedTabSelectedTextColor = Color(0xFFFAFAFF)
+private val RoundedTabUnselectedTextColorDark = Color(0xFFA3A3A7)
+private val RoundedTabUnselectedTextColorLight = Color(0xFF848487)
+
+/** Floating view-mode switcher (Woche/Tag) — see [RoundedTabTrackColorDark] doc comment for source. */
 @Composable
 private fun BottomNavPill(
     selected: PlanViewMode,
     onSelect: (PlanViewMode) -> Unit,
-    hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
+    val trackColor = if (isSystemInDarkTheme()) RoundedTabTrackColorDark else RoundedTabTrackColorLight
     Row(
         modifier
             .clip(PillShape)
-            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .padding(5.dp),
+            .background(trackColor)
+            .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         BottomNavItem(Icons.Filled.ViewWeek, "Woche", selected == PlanViewMode.WEEK) {
@@ -537,16 +540,14 @@ private fun BottomNavPill(
 
 @Composable
 private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
-    // A flat white-alpha overlay (not a theme surface token) so the highlight is a guaranteed
-    // neutral gray, clearly lighter than the frosted bar behind it — matching how visibly the
-    // selected pill in Samsung Wallet's own nav bar stands out from its surroundings.
+    val unselectedFg = if (isSystemInDarkTheme()) RoundedTabUnselectedTextColorDark else RoundedTabUnselectedTextColorLight
     val bg by animateColorAsState(
-        if (selected) Color.White.copy(alpha = 0.18f) else Color.Transparent,
+        if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
         animationSpec = tween(PILL_ANIM_MS),
         label = "navItemBg",
     )
     val fg by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        if (selected) RoundedTabSelectedTextColor else unselectedFg,
         animationSpec = tween(PILL_ANIM_MS),
         label = "navItemFg",
     )

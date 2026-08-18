@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.15
+
+- **Navigationsleiste nach echten Samsung-Vorlagen neu gebaut**: Anhand einer öffentlich einsehbaren Nachbildung von Samsungs eigener Oberflächen-Bibliothek (statt nur Screenshot-Vergleich) neu umgesetzt: fester, einfarbiger Hintergrund statt Weichzeichner-Effekt, und der aktive Tab ("Woche"/"Tag") wird jetzt vollflächig in der App-Akzentfarbe hervorgehoben, mit den exakten Text- und Hintergrundfarben aus Samsungs eigenem Design.
+
 ## Version 1.0.14
 
 - **Absturz beim Update behoben**: Ein Tipp auf "Update herunterladen" hat die App zum Absturz gebracht, statt den Browser zu öffnen. Behoben.

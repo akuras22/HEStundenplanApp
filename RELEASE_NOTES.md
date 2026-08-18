@@ -1,1 +1,1 @@
-- **Absturz beim Update behoben**: Ein Tipp auf "Update herunterladen" hat die App zum Absturz gebracht, statt den Browser zu öffnen. Behoben.
+- **Navigationsleiste nach echten Samsung-Vorlagen neu gebaut**: Anhand einer öffentlich einsehbaren Nachbildung von Samsungs eigener Oberflächen-Bibliothek (statt nur Screenshot-Vergleich) neu umgesetzt: fester, einfarbiger Hintergrund statt Weichzeichner-Effekt, und der aktive Tab ("Woche"/"Tag") wird jetzt vollflächig in der App-Akzentfarbe hervorgehoben, mit den exakten Text- und Hintergrundfarben aus Samsungs eigenem Design.
