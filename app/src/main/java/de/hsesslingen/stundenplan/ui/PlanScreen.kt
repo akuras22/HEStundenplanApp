@@ -47,6 +47,8 @@ import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.outlined.ViewDay
+import androidx.compose.material.icons.outlined.ViewWeek
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
@@ -72,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -502,71 +505,105 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     }
 }
 
-// Sourced from the reverse-engineered OneUI design library (github.com/tribalfs/oneui-design),
-// drawable/oui_des_rounded_tab_background_selected.xml + values-night/colors.xml — Samsung's real
-// "RoundedTabLayout" segmented control, which is what a 2-way view-mode switcher like Woche/Tag
-// actually is in OneUI terms (not a top-level nav bar like Wallet's tab bar, which is a different
-// component). It's flat solid colors, not a blur: track background #47474a (dark)/#e4e4e7 (light),
-// selected pill filled with colorPrimary, selected text #fafaff, unselected text #a3a3a7.
-private val RoundedTabTrackColorDark = Color(0xFF47474A)
-private val RoundedTabTrackColorLight = Color(0xFFE4E4E7)
-private val RoundedTabSelectedTextColor = Color(0xFFFAFAFF)
-private val RoundedTabUnselectedTextColorDark = Color(0xFFA3A3A7)
-private val RoundedTabUnselectedTextColorLight = Color(0xFF848487)
+// One UI bottom navigation bar, measured pixel-by-pixel from a screen recording of Samsung Wallet's
+// own bar (1080px capture of a 1440px / 3.5x-density device, so 1dp = 2.625px) and cross-checked
+// against Samsung Gallery's bar at full 1440px. What the measurements actually showed — several
+// points contradict how this was guessed from screenshots before:
+//   track     264 x 64dp stadium, #252427 over black, 4.5dp inner padding
+//   segments  EQUAL FIXED WIDTH (128dp each), not wrap-content: "Schnellzugriff" and "Alle"
+//             measure byte-identical at 132.6dp despite wildly different label lengths
+//   selected  stadium filling its whole segment, #3B3A3D — a neutral gray, NOT an accent color
+//   icons     FILLED when selected, OUTLINED when not; together with the bold label this is what
+//             actually reads as "selected", since both labels are near-white (#FCFBFE vs #E8E7EA)
+//   labels    12sp, bold when selected, regular otherwise
+//   switching INSTANT — 60fps frames show zero intermediate states, so no crossfade and no slide
+private val OneUiNavTrackDark = Color(0xFF252427)
+private val OneUiNavSelectedDark = Color(0xFF3B3A3D)
+private val OneUiNavSelectedContentDark = Color(0xFFFCFBFE)
+private val OneUiNavUnselectedContentDark = Color(0xFFE8E7EA)
+// Light-mode counterparts (Samsung inverts the relationship: the selected segment becomes the
+// lightest surface rather than the darkest).
+private val OneUiNavTrackLight = Color(0xFFE4E4E7)
+private val OneUiNavSelectedLight = Color(0xFFFCFCFD)
+private val OneUiNavSelectedContentLight = Color(0xFF17171A)
+private val OneUiNavUnselectedContentLight = Color(0xFF48484B)
 
-/** Floating view-mode switcher (Woche/Tag) — see [RoundedTabTrackColorDark] doc comment for source. */
+private val OneUiNavSegmentWidth = 128.dp
+private val OneUiNavTrackPadding = 4.5.dp
+
+/** Floating view-mode switcher (Woche/Tag) — see the measurements above for where every value comes from. */
 @Composable
 private fun BottomNavPill(
     selected: PlanViewMode,
     onSelect: (PlanViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val trackColor = if (isSystemInDarkTheme()) RoundedTabTrackColorDark else RoundedTabTrackColorLight
+    val dark = isSystemInDarkTheme()
     Row(
         modifier
+            .shadow(3.dp, PillShape)
             .clip(PillShape)
-            .background(trackColor)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+            .background(if (dark) OneUiNavTrackDark else OneUiNavTrackLight)
+            .padding(OneUiNavTrackPadding),
     ) {
-        BottomNavItem(Icons.Filled.ViewWeek, "Woche", selected == PlanViewMode.WEEK) {
-            onSelect(PlanViewMode.WEEK)
-        }
-        BottomNavItem(Icons.Filled.ViewDay, "Tag", selected == PlanViewMode.DAY) {
-            onSelect(PlanViewMode.DAY)
-        }
+        BottomNavItem(
+            selectedIcon = Icons.Filled.ViewWeek,
+            unselectedIcon = Icons.Outlined.ViewWeek,
+            label = "Woche",
+            selected = selected == PlanViewMode.WEEK,
+        ) { onSelect(PlanViewMode.WEEK) }
+        BottomNavItem(
+            selectedIcon = Icons.Filled.ViewDay,
+            unselectedIcon = Icons.Outlined.ViewDay,
+            label = "Tag",
+            selected = selected == PlanViewMode.DAY,
+        ) { onSelect(PlanViewMode.DAY) }
     }
 }
 
 @Composable
-private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
-    val unselectedFg = if (isSystemInDarkTheme()) RoundedTabUnselectedTextColorDark else RoundedTabUnselectedTextColorLight
-    val bg by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        animationSpec = tween(PILL_ANIM_MS),
-        label = "navItemBg",
-    )
-    val fg by animateColorAsState(
-        if (selected) RoundedTabSelectedTextColor else unselectedFg,
-        animationSpec = tween(PILL_ANIM_MS),
-        label = "navItemFg",
-    )
+private fun BottomNavItem(
+    selectedIcon: ImageVector,
+    unselectedIcon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val dark = isSystemInDarkTheme()
+    // Deliberately not animated: the reference switches state within a single 60fps frame.
+    val bg = when {
+        !selected -> Color.Transparent
+        dark -> OneUiNavSelectedDark
+        else -> OneUiNavSelectedLight
+    }
+    val fg = when {
+        selected -> if (dark) OneUiNavSelectedContentDark else OneUiNavSelectedContentLight
+        else -> if (dark) OneUiNavUnselectedContentDark else OneUiNavUnselectedContentLight
+    }
     Column(
         Modifier
+            .width(OneUiNavSegmentWidth)
             .clip(PillShape)
             .background(bg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 22.dp, vertical = 10.dp),
+            // 6.5 + 24(icon) + 3.5(gap) + 14(label line box) + 6.5 = 54.5dp, matching the
+            // reference's measured 54.5dp segment height exactly.
+            .padding(vertical = 6.5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(3.5.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(24.dp))
+        Icon(
+            if (selected) selectedIcon else unselectedIcon,
+            contentDescription = null,
+            tint = fg,
+            modifier = Modifier.size(24.dp),
+        )
         Text(
             label,
-            fontSize = 13.sp,
-            lineHeight = 15.sp,
+            fontSize = 12.sp,
+            lineHeight = 14.sp,
             color = fg,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         )
     }
 }

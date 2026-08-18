@@ -1,1 +1,6 @@
-- **Navigationsleiste nach echten Samsung-Vorlagen neu gebaut**: Anhand einer öffentlich einsehbaren Nachbildung von Samsungs eigener Oberflächen-Bibliothek (statt nur Screenshot-Vergleich) neu umgesetzt: fester, einfarbiger Hintergrund statt Weichzeichner-Effekt, und der aktive Tab ("Woche"/"Tag") wird jetzt vollflächig in der App-Akzentfarbe hervorgehoben, mit den exakten Text- und Hintergrundfarben aus Samsungs eigenem Design.
+- **Untere Leiste jetzt wirklich wie bei Samsung**: Statt weiter nach Augenmaß nachzubauen, wurden die Maße und Farben diesmal Pixel für Pixel aus einer Bildschirmaufnahme von Samsung Wallet ausgemessen. Dabei kam heraus, dass mehrere bisherige Annahmen schlicht falsch waren:
+  - Der aktive Tab ist bei Samsung **grau**, nicht farbig — die blaue Hervorhebung der letzten Version gab es dort nie.
+  - Die Symbole wechseln zwischen **ausgefüllt** (aktiv) und **nur umrandet** (inaktiv). Genau das macht bei Samsung den Unterschied aus, zusammen mit der fetteren Schrift — nicht die Farbe.
+  - Beide Bereiche sind **exakt gleich breit**, unabhängig davon wie lang die Beschriftung ist.
+  - Der Wechsel passiert **sofort**, ganz ohne Animation.
+- Größen, Abstände, Eckenrundung und Farbtöne stimmen jetzt auf ein Zehntel Millimeter genau mit Samsungs eigener Leiste überein.
