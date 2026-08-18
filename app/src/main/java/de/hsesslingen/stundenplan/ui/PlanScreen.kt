@@ -81,6 +81,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
@@ -287,6 +288,13 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         state.studiengang?.code ?: "Stundenplan",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        // Without a weight, this Text is free to size itself past the Row's actual
+                        // width — with the "Stundenplan" placeholder (much longer than a real
+                        // Studiengang code like "WKB1") that pushed the icon row's last button
+                        // (Einstellungen) fully off-screen, leaving only a sliver of it visible.
+                        modifier = Modifier.weight(1f),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
@@ -677,17 +685,21 @@ private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCod
                             )
                         }
                     }
-                    dayEvents.forEach { event ->
+                    val outerMargin = 4.dp
+                    val slotGap = 4.dp
+                    layoutOverlaps(dayEvents).forEach { slot ->
+                        val event = slot.event
                         val top = MINUTE_HEIGHT * (event.startMinutes - dayStart)
                         val height = MINUTE_HEIGHT * (event.endMinutes - event.startMinutes).coerceAtLeast(35)
+                        val slotWidth = (columnWidth - outerMargin * 2 - slotGap * (slot.columnCount - 1)) / slot.columnCount
+                        val left = outerMargin + (slotWidth + slotGap) * slot.column
                         DayTimelineCard(
                             event = event,
                             courseCode = courseCode,
                             onClick = { onEventClick(event) },
                             modifier = Modifier
-                                .offset(y = top)
-                                .padding(horizontal = 4.dp)
-                                .width(columnWidth - 8.dp)
+                                .offset(x = left, y = top)
+                                .width(slotWidth)
                                 .heightIn(min = height),
                         )
                     }
@@ -736,6 +748,57 @@ private const val DAY_START_MINUTES_DEFAULT = 8 * 60
 private const val DAY_END_MINUTES_DEFAULT = 19 * 60
 private val MINUTE_HEIGHT = 1.3.dp
 private val TIME_AXIS_WIDTH = 40.dp
+
+private data class OverlapSlot(val event: TimetableEvent, val column: Int, val columnCount: Int)
+
+/**
+ * Assigns side-by-side columns to events that overlap in time — Google-Calendar-style — instead of
+ * stacking them exactly on top of each other (which used to just show whichever card was drawn
+ * last, with the one underneath bleeding through at half opacity).
+ *
+ * Events are grouped into clusters of mutually (possibly transitively) overlapping events by
+ * tracking the running max end-time, then greedily packed into the fewest columns within each
+ * cluster: each event goes into the first column whose previous event has already ended.
+ */
+private fun layoutOverlaps(events: List<TimetableEvent>): List<OverlapSlot> {
+    val sorted = events.sortedWith(compareBy({ it.startMinutes }, { it.endMinutes }))
+    val result = mutableListOf<OverlapSlot>()
+    var cluster = mutableListOf<TimetableEvent>()
+    var clusterEnd = 0
+
+    fun flushCluster() {
+        if (cluster.isEmpty()) return
+        val columnEnds = mutableListOf<Int>()
+        val columnByEvent = HashMap<TimetableEvent, Int>()
+        for (event in cluster) {
+            val column = columnEnds.indexOfFirst { it <= event.startMinutes }
+            if (column >= 0) {
+                columnEnds[column] = event.endMinutes
+                columnByEvent[event] = column
+            } else {
+                columnEnds.add(event.endMinutes)
+                columnByEvent[event] = columnEnds.lastIndex
+            }
+        }
+        val columnCount = columnEnds.size
+        cluster.forEach { result.add(OverlapSlot(it, columnByEvent.getValue(it), columnCount)) }
+        cluster = mutableListOf()
+    }
+
+    for (event in sorted) {
+        when {
+            cluster.isEmpty() -> clusterEnd = event.endMinutes
+            event.startMinutes < clusterEnd -> clusterEnd = maxOf(clusterEnd, event.endMinutes)
+            else -> {
+                flushCluster()
+                clusterEnd = event.endMinutes
+            }
+        }
+        cluster.add(event)
+    }
+    flushCluster()
+    return result
+}
 
 /** A real Untis-style grid: all five weekdays fit on screen, hour gridlines, sticky day header, now-line, swipeable. */
 @Composable
@@ -998,15 +1061,19 @@ private fun DayColumn(
                 )
             }
         }
-        events.forEach { event ->
+        val outerMargin = 2.dp
+        val slotGap = 3.dp
+        layoutOverlaps(events).forEach { slot ->
+            val event = slot.event
             val top = MINUTE_HEIGHT * (event.startMinutes - dayStart)
             val height = MINUTE_HEIGHT * (event.endMinutes - event.startMinutes).coerceAtLeast(15)
             val roomFontSize = (titleFontSize.value - 1f).coerceAtLeast(6f).sp
+            val slotWidth = (columnWidth - outerMargin * 2 - slotGap * (slot.columnCount - 1)) / slot.columnCount
+            val left = outerMargin + (slotWidth + slotGap) * slot.column
             Box(
                 Modifier
-                    .offset(y = top)
-                    .padding(horizontal = 2.dp)
-                    .width(columnWidth - 4.dp)
+                    .offset(x = left, y = top)
+                    .width(slotWidth)
                     .heightIn(min = height)
                     .clip(MaterialTheme.shapes.medium)
                     .background(colorFor(event.title).copy(alpha = 0.9f))
