@@ -2,6 +2,11 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.11
+
+- **Gitternetz im Untis-Stil**: Die Linien für Stunden und Tage sind jetzt deutlich kräftiger und wirken wie ein echtes Raster, ähnlich wie man es aus Untis kennt. Die Markierungslinie für Veranstaltungen, die nicht zur vollen Stunde beginnen, ist jetzt gestrichelt statt farbig — passt sich damit ins Raster ein, statt wie ein separater bunter Hinweis zu wirken.
+- **Untere Navigationsleiste an Samsung angepasst**: "Woche"/"Tag" unten sehen jetzt genauso aus wie die Navigationsleisten in Samsungs eigenen Apps (z. B. Telefon, Galerie) — ohne auffälligen Hintergrund-Pfeil hinter dem aktiven Tab, nur durch hellere Farbe und Schrift hervorgehoben.
+
 ## Version 1.0.10
 
 - **Gitternetz zurückgesetzt, dafür markiert wo eine Veranstaltung genau beginnt**: Die generell hellere Gitternetz-Optik aus Version 1.0.9 wurde wieder zurückgenommen (war anders gemeint) — stattdessen gibt es jetzt genau an den Stellen, wo eine Veranstaltung nicht zur vollen Stunde beginnt (z. B. 11:10 Uhr), eine eigene farbige Linie quer durch die Ansicht, passend zur Uhrzeit links.

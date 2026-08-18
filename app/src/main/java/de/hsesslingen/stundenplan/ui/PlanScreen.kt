@@ -75,6 +75,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -519,20 +520,19 @@ private fun BottomNavPill(
     hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
-    // Wrap-content, not full-width — Samsung's own bars hug their items tightly instead of
-    // stretching tabs across the whole width with big gaps between them. Items are equal width
-    // and overlap slightly, matching the reference screenshots.
+    // Matched to the actual first-party bars (Phone/Gallery/Galaxy Store): a contiguous segmented
+    // strip with no gaps between items and no background highlight on the active one — the active
+    // tab is only distinguished by brighter icon/text color and slightly heavier weight, exactly
+    // like "Tastatur" in the Phone app or "Bilder" in Gallery.
     Row(
         modifier
             .clip(PillShape)
-            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin())
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy((-10).dp),
+            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin()),
     ) {
-        BottomNavItem(Icons.Filled.ViewWeek, "Woche", selected == PlanViewMode.WEEK, Modifier.width(96.dp)) {
+        BottomNavItem(Icons.Filled.ViewWeek, "Woche", selected == PlanViewMode.WEEK, Modifier.width(100.dp)) {
             onSelect(PlanViewMode.WEEK)
         }
-        BottomNavItem(Icons.Filled.ViewDay, "Tag", selected == PlanViewMode.DAY, Modifier.width(96.dp)) {
+        BottomNavItem(Icons.Filled.ViewDay, "Tag", selected == PlanViewMode.DAY, Modifier.width(100.dp)) {
             onSelect(PlanViewMode.DAY)
         }
     }
@@ -540,13 +540,6 @@ private fun BottomNavPill(
 
 @Composable
 private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    // Only the selected tab gets a visible pill — unselected tabs are fully transparent,
-    // matching the reference screenshot exactly.
-    val bg by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f) else Color.Transparent,
-        animationSpec = tween(PILL_ANIM_MS),
-        label = "navItemBg",
-    )
     val fg by animateColorAsState(
         if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(PILL_ANIM_MS),
@@ -554,18 +547,18 @@ private fun BottomNavItem(icon: ImageVector, label: String, selected: Boolean, m
     )
     Column(
         modifier
-            .clip(PillShape)
-            .background(bg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(24.dp))
         Text(
             label,
-            style = MaterialTheme.typography.labelMedium,
+            fontSize = 13.sp,
+            lineHeight = 15.sp,
             color = fg,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
 }
@@ -1092,12 +1085,16 @@ private fun GridLines(
     dayCount: Int = 5,
     extraStartMinutes: Set<Int> = emptySet(),
 ) {
-    val lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-    // Same extra start times TimeAxis labels (e.g. 11:10) get their own highlighted line here too,
-    // in the event's own accent color, so the "starts here, not on the hour" mark is visible across
-    // the whole row, not just as a label off to the side.
-    val extraLineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+    // Untis-style grid: clearly visible neutral lines that actually read as a table, not the old
+    // near-invisible 0.08-alpha hairline. The extra-start-time line (e.g. 11:10) uses the SAME
+    // neutral color as the rest of the grid — just dashed — instead of a colored accent, so it
+    // reads as "part of the grid" rather than a separate colored callout.
+    val hourLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
+    val dayLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
+    val extraLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
     val hourCount = (dayEnd - dayStart) / 60
+    val strokePx = with(LocalDensity.current) { 1.dp.toPx() }
+    val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(8f, 6f)) }
     Canvas(Modifier.fillMaxWidth().height(totalHeight)) {
         val axisPx = TIME_AXIS_WIDTH.toPx()
         val colPx = columnWidth.toPx()
@@ -1105,18 +1102,18 @@ private fun GridLines(
         // Horizontal hour lines.
         for (i in 0..hourCount) {
             val y = size.height * i / hourCount
-            drawLine(lineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = 1f)
+            drawLine(hourLineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = strokePx)
         }
         // Vertical day separators.
         for (i in 0..dayCount) {
             val x = axisPx + colPx * i
-            drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+            drawLine(dayLineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = strokePx)
         }
-        // Extra lines for event start times that don't land on the hour.
+        // Dashed lines for event start times that don't land on the hour.
         for (minute in extraStartMinutes) {
             if (minute % 60 == 0 || minute !in dayStart..dayEnd) continue
             val y = size.height * (minute - dayStart) / (dayEnd - dayStart)
-            drawLine(extraLineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = 1.5f)
+            drawLine(extraLineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = strokePx, pathEffect = dashEffect)
         }
     }
 }
