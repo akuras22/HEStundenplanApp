@@ -1,0 +1,3 @@
+- **Aktiver Tag in der Tagesansicht repariert**: Beim schnellen Durchwischen mehrerer Tage konnte die Markierung oben (welcher Tag gerade ausgewählt ist) hängen bleiben und nicht mehr zum tatsächlich angezeigten Tag passen. Das ist jetzt behoben.
+- **Genaue Startzeiten in der Zeitleiste**: Links werden weiterhin die vollen Stunden angezeigt (8:00, 9:00, …), zusätzlich aber jetzt auch die genaue Uhrzeit, wenn eine Veranstaltung nicht zur vollen Stunde beginnt (z. B. 11:10 Uhr).
+- **Titel oben repariert**: Wenn noch kein Studiengang ausgewählt war, konnte der Titel "Stundenplan" abgeschnitten aussehen oder die Symbole rechts verdrängen. Der Titel passt sich jetzt automatisch in der Größe an, statt abgeschnitten zu werden.

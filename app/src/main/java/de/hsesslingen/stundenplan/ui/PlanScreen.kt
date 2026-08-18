@@ -65,6 +65,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -81,7 +82,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
@@ -163,6 +163,31 @@ private fun rememberFittingFontSize(
             maxFontSize
         } else {
             val scale = availablePx / longestWordPxAtMax
+            (maxFontSize.value * scale).coerceIn(minFontSize.value, maxFontSize.value).sp
+        }
+    }
+}
+
+/** Largest font size (down to [minFontSize]) at which the whole [text] fits on one line within
+ *  [availableWidth] — for headers where truncating with an ellipsis would just look broken. */
+@Composable
+private fun rememberFittingSingleLineFontSize(
+    text: String,
+    availableWidth: Dp,
+    maxFontSize: TextUnit,
+    minFontSize: TextUnit,
+    fontWeight: FontWeight,
+): TextUnit {
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, availableWidth) {
+        if (text.isBlank()) return@remember maxFontSize
+        val availablePx = with(density) { availableWidth.toPx() }
+        val widthAtMax = textMeasurer.measure(text = text, style = TextStyle(fontSize = maxFontSize, fontWeight = fontWeight)).size.width
+        if (widthAtMax <= availablePx) {
+            maxFontSize
+        } else {
+            val scale = availablePx / widthAtMax
             (maxFontSize.value * scale).coerceIn(minFontSize.value, maxFontSize.value).sp
         }
     }
@@ -284,18 +309,29 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        state.studiengang?.code ?: "Stundenplan",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        // Without a weight, this Text is free to size itself past the Row's actual
-                        // width — with the "Stundenplan" placeholder (much longer than a real
-                        // Studiengang code like "WKB1") that pushed the icon row's last button
-                        // (Einstellungen) fully off-screen, leaving only a sliver of it visible.
-                        modifier = Modifier.weight(1f),
-                    )
+                    val title = state.studiengang?.code ?: "Stundenplan"
+                    // BoxWithConstraints (not a plain weight(1f) Text) so the available width is
+                    // known up front for the font-fit measurement below — a weighted Text only
+                    // learns its own width during layout, too late to size itself by. Without
+                    // shrinking, the "Stundenplan" placeholder (longer than a real Studiengang code
+                    // like "WKB1") could size itself past the row's actual width and push the icon
+                    // row's last button (Einstellungen) off-screen; an ellipsis technically fixed
+                    // that but just looked broken ("Stunde…").
+                    BoxWithConstraints(Modifier.weight(1f)) {
+                        val titleFontSize = rememberFittingSingleLineFontSize(
+                            text = title,
+                            availableWidth = maxWidth,
+                            maxFontSize = MaterialTheme.typography.headlineLarge.fontSize,
+                            minFontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.headlineLarge.copy(fontSize = titleFontSize),
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
                         GlassIconButton(Icons.Filled.EditCalendar, "Datum wählen") { showDatePicker = true }
@@ -593,12 +629,18 @@ private fun DayView(
     onEventClick: (TimetableEvent) -> Unit,
 ) {
     val pagerState = rememberPagerState(initialPage = dateToDayPage(selectedDate)) { DAY_PAGE_COUNT }
+    // This effect runs for the composable's whole lifetime (keyed only on the stable pagerState),
+    // so it must read selectedDate through rememberUpdatedState rather than close over the plain
+    // parameter — otherwise it keeps comparing against whatever selectedDate was at first
+    // composition, drifting out of sync after a few swipes and leaving the weekday chip row
+    // highlighting a day that no longer matches what's actually shown.
+    val currentSelectedDate by rememberUpdatedState(selectedDate)
 
     // Swipe -> selectedDate.
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             val date = dayPageToDate(page)
-            if (date != selectedDate) onDateSelected(date)
+            if (date != currentSelectedDate) onDateSelected(date)
         }
     }
     // External date change (date picker, tapping a day in week view, weekday pill) -> swipe there.
@@ -669,7 +711,12 @@ private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCod
         Box(Modifier.fillMaxWidth()) {
             GridLines(dayStart = dayStart, dayEnd = dayEnd, totalHeight = totalHeight, columnWidth = columnWidth, dayCount = 1)
             Row(Modifier.fillMaxWidth()) {
-                TimeAxis(dayStart = dayStart, dayEnd = dayEnd, totalHeight = totalHeight)
+                TimeAxis(
+                    dayStart = dayStart,
+                    dayEnd = dayEnd,
+                    totalHeight = totalHeight,
+                    extraStartMinutes = dayEvents.map { it.startMinutes }.toSet(),
+                )
                 Box(Modifier.width(columnWidth).height(totalHeight)) {
                     if (date == LocalDate.now()) {
                         val now = LocalTime.now()
@@ -812,13 +859,18 @@ private fun WeekView(
 ) {
     val pagerState = rememberPagerState(initialPage = dateToWeekPage(selectedDate)) { WEEK_PAGE_COUNT }
     val dayOffsetInWeek = ChronoUnit.DAYS.between(selectedDate.weekMonday(), selectedDate).toInt()
+    // See the matching comment in DayView — this effect outlives any single composition, so it
+    // must always read the latest selectedDate/dayOffsetInWeek, not the values frozen at first
+    // launch.
+    val currentSelectedDate by rememberUpdatedState(selectedDate)
+    val currentDayOffsetInWeek by rememberUpdatedState(dayOffsetInWeek)
 
     // Swipe -> selectedDate (keeping the same weekday offset within the new week).
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             val newMonday = weekPageToMonday(page)
-            val newDate = newMonday.plusDays(dayOffsetInWeek.toLong())
-            if (newDate != selectedDate) onWeekChanged(newDate)
+            val newDate = newMonday.plusDays(currentDayOffsetInWeek.toLong())
+            if (newDate != currentSelectedDate) onWeekChanged(newDate)
         }
     }
     // External date change (date picker, coming back from day view) -> swipe there.
@@ -930,7 +982,12 @@ private fun WeekGrid(
         Box(Modifier.fillMaxWidth()) {
             GridLines(dayStart = dayStart, dayEnd = dayEnd, totalHeight = totalHeight, columnWidth = columnWidth)
             Row(Modifier.fillMaxWidth()) {
-                TimeAxis(dayStart = dayStart, dayEnd = dayEnd, totalHeight = totalHeight)
+                TimeAxis(
+                    dayStart = dayStart,
+                    dayEnd = dayEnd,
+                    totalHeight = totalHeight,
+                    extraStartMinutes = allVisible.map { it.startMinutes }.toSet(),
+                )
                 Weekday.entries.forEach { day ->
                     val date = monday.plusDays(day.ordinal.toLong())
                     DayColumn(
@@ -1017,19 +1074,35 @@ private fun GridLines(dayStart: Int, dayEnd: Int, totalHeight: Dp, columnWidth: 
     }
 }
 
+/**
+ * Hour marks (unchanged) plus one extra mark per [extraStartMinutes] entry that doesn't land on the
+ * hour — e.g. a lecture starting 11:10 gets its own "11:10" label at the right height, instead of
+ * only ever showing "11:00"/"12:00" and leaving you to eyeball where in between it actually starts.
+ */
 @Composable
-private fun TimeAxis(dayStart: Int, dayEnd: Int, totalHeight: Dp) {
-    Column(Modifier.width(TIME_AXIS_WIDTH).height(totalHeight)) {
+private fun TimeAxis(dayStart: Int, dayEnd: Int, totalHeight: Dp, extraStartMinutes: Set<Int> = emptySet()) {
+    Box(Modifier.width(TIME_AXIS_WIDTH).height(totalHeight)) {
         var hour = dayStart
         while (hour < dayEnd) {
-            Box(Modifier.height(MINUTE_HEIGHT * 60), contentAlignment = Alignment.TopCenter) {
-                Text(
-                    "%02d:00".format(hour / 60),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                "%02d:00".format(hour / 60),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().offset(y = MINUTE_HEIGHT * (hour - dayStart)),
+            )
             hour += 60
+        }
+        for (minute in extraStartMinutes) {
+            if (minute % 60 == 0 || minute !in dayStart..dayEnd) continue
+            Text(
+                "%02d:%02d".format(minute / 60, minute % 60),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().offset(y = MINUTE_HEIGHT * (minute - dayStart)),
+            )
         }
     }
 }
