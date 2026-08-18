@@ -2,6 +2,11 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.8
+
+- **Update-Hinweis besser lesbar**: Die Formatierung in der "Update verfügbar"-Meldung (fett gedruckte Begriffe, Aufzählungspunkte) wird jetzt wirklich als Formatierung angezeigt, statt die Sternchen (**) wörtlich mit auszugeben.
+- **Aufgeräumter Start-Bildschirm**: Solange noch kein Studiengang ausgewählt ist, zeigt die App oben nur noch das Zahnrad (Einstellungen) an — die anderen Knöpfe (Heute, Datum wählen, Aktualisieren) hätten sowieso nichts zu tun, ohne dass ein Stundenplan geladen ist.
+
 ## Version 1.0.7
 
 - **Aktiver Tag in der Tagesansicht repariert**: Beim schnellen Durchwischen mehrerer Tage konnte die Markierung oben (welcher Tag gerade ausgewählt ist) hängen bleiben und nicht mehr zum tatsächlich angezeigten Tag passen. Das ist jetzt behoben.

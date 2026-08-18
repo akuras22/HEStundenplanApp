@@ -78,10 +78,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
@@ -333,9 +337,15 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
-                        GlassIconButton(Icons.Filled.EditCalendar, "Datum wählen") { showDatePicker = true }
-                        GlassIconButton(Icons.Filled.Refresh, "Aktualisieren") { viewModel.refresh() }
+                        // Heute/Datum/Aktualisieren all act on a plan that doesn't exist yet
+                        // without a chosen Studiengang — showing them as live buttons with nothing
+                        // to do just invites a confusing no-op tap, so only Einstellungen (the one
+                        // way to actually fix that) shows until a Studiengang is selected.
+                        if (state.studiengang != null) {
+                            GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
+                            GlassIconButton(Icons.Filled.EditCalendar, "Datum wählen") { showDatePicker = true }
+                            GlassIconButton(Icons.Filled.Refresh, "Aktualisieren") { viewModel.refresh() }
+                        }
                         GlassIconButton(Icons.Filled.Settings, "Einstellungen") { onOpenSettings() }
                     }
                 }
@@ -1208,6 +1218,27 @@ private fun EventDetailDialog(event: TimetableEvent, onDismiss: () -> Unit) {
     )
 }
 
+private val MARKDOWN_BOLD_RE = Regex("""\*\*(.+?)\*\*""")
+
+/** Renders the small Markdown subset used in RELEASE_NOTES.md — "- " bullet lines and **bold**
+ *  spans — as real formatting instead of showing the literal "**"/"- " characters. Not a general
+ *  Markdown parser; just enough for release notes written by hand. */
+private fun renderReleaseNotesMarkdown(markdown: String): AnnotatedString = buildAnnotatedString {
+    markdown.lines().forEachIndexed { index, line ->
+        if (index > 0) append("\n")
+        val isBullet = line.startsWith("- ")
+        val content = if (isBullet) line.removePrefix("- ") else line
+        if (isBullet) append("•  ")
+        var lastEnd = 0
+        for (match in MARKDOWN_BOLD_RE.findAll(content)) {
+            append(content.substring(lastEnd, match.range.first))
+            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(match.groupValues[1]) }
+            lastEnd = match.range.last + 1
+        }
+        append(content.substring(lastEnd))
+    }
+}
+
 /** OTA update prompt — download progress replaces the action buttons mid-download so there's
  *  no way to dismiss or double-trigger a download that's already running. */
 @Composable
@@ -1238,7 +1269,7 @@ private fun UpdateDialog(
         text = {
             Column {
                 if (!info.releaseNotes.isNullOrBlank()) {
-                    Text(info.releaseNotes, style = MaterialTheme.typography.bodyMedium)
+                    Text(renderReleaseNotesMarkdown(info.releaseNotes), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(12.dp))
                 }
                 if (!canInstall) {
