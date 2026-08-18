@@ -2,6 +2,12 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.9
+
+- **Gitternetz deutlich sichtbarer**: Die Linien für Stunden und Tage in der Wochen- und Tagesansicht waren kaum zu erkennen. Jetzt ist auf einen Blick klar, wo eine Stunde beginnt und wo ein Tag endet.
+- **Überlappende Termine besser lesbar**: Wenn drei Veranstaltungen gleichzeitig stattfinden (z. B. drei Tutoriumsgruppen), wurde der Text vorher in einzelne Buchstaben zerhackt. Der Text passt sich jetzt an die verfügbare Breite an, und bei sehr engen Spalten wird der Raum ausgeblendet, damit der Titel lesbar bleibt (den Raum sieht man weiterhin beim Antippen).
+- **Tagesansicht optisch an die Wochenansicht angeglichen**: Die Tagesauswahl oben (Mo, Di, Mi, …) ist jetzt exakt so ausgerichtet wie in der Wochenansicht, mit denselben Abständen und Spaltenbreiten.
+
 ## Version 1.0.8
 
 - **Update-Hinweis besser lesbar**: Die Formatierung in der "Update verfügbar"-Meldung (fett gedruckte Begriffe, Aufzählungspunkte) wird jetzt wirklich als Formatierung angezeigt, statt die Sternchen (**) wörtlich mit auszugeben.

@@ -85,6 +85,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -669,20 +670,24 @@ private fun DayView(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
         )
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Weekday.entries.forEach { day ->
-                val date = monday.plusDays(day.ordinal.toLong())
-                DateChip(
-                    day = day,
-                    date = date,
-                    selected = date == selectedDate,
-                    isToday = date == LocalDate.now(),
-                    modifier = Modifier.weight(1f),
-                    onClick = { onDateSelected(date) },
-                )
+        // Same padding/column-width math as WeekGrid's header row below, so the chips land at
+        // exactly the same horizontal positions as the week view's — switching between Woche/Tag
+        // shouldn't visibly shift where "Mo"/"Di"/… sit on screen.
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+            val columnWidth = (maxWidth - TIME_AXIS_WIDTH) / 5
+            Row(Modifier.fillMaxWidth()) {
+                Spacer(Modifier.width(TIME_AXIS_WIDTH))
+                Weekday.entries.forEach { day ->
+                    val date = monday.plusDays(day.ordinal.toLong())
+                    DateChip(
+                        day = day,
+                        date = date,
+                        selected = date == selectedDate,
+                        isToday = date == LocalDate.now(),
+                        modifier = Modifier.width(columnWidth),
+                        onClick = { onDateSelected(date) },
+                    )
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -1065,8 +1070,13 @@ private fun DateChip(
 
 @Composable
 private fun GridLines(dayStart: Int, dayEnd: Int, totalHeight: Dp, columnWidth: Dp, dayCount: Int = 5) {
-    val lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    // The old 0.08 alpha + 1px hair-line was essentially invisible against pure black — bumped up
+    // (and drawn at a real 1.dp stroke instead of 1 raw pixel, which shrinks to nothing on
+    // high-density screens) so the grid actually reads as a grid.
+    val hourLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f)
+    val dayLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)
     val hourCount = (dayEnd - dayStart) / 60
+    val strokePx = with(LocalDensity.current) { 1.dp.toPx() }
     Canvas(Modifier.fillMaxWidth().height(totalHeight)) {
         val axisPx = TIME_AXIS_WIDTH.toPx()
         val colPx = columnWidth.toPx()
@@ -1074,12 +1084,12 @@ private fun GridLines(dayStart: Int, dayEnd: Int, totalHeight: Dp, columnWidth: 
         // Horizontal hour lines.
         for (i in 0..hourCount) {
             val y = size.height * i / hourCount
-            drawLine(lineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = 1f)
+            drawLine(hourLineColor, Offset(axisPx, y), Offset(totalWidth, y), strokeWidth = strokePx)
         }
         // Vertical day separators.
         for (i in 0..dayCount) {
             val x = axisPx + colPx * i
-            drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+            drawLine(dayLineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = strokePx)
         }
     }
 }
@@ -1150,9 +1160,24 @@ private fun DayColumn(
             val event = slot.event
             val top = MINUTE_HEIGHT * (event.startMinutes - dayStart)
             val height = MINUTE_HEIGHT * (event.endMinutes - event.startMinutes).coerceAtLeast(15)
-            val roomFontSize = (titleFontSize.value - 1f).coerceAtLeast(6f).sp
             val slotWidth = (columnWidth - outerMargin * 2 - slotGap * (slot.columnCount - 1)) / slot.columnCount
             val left = outerMargin + (slotWidth + slotGap) * slot.column
+            val innerPadding = if (slot.columnCount > 1) 3.dp else 4.dp
+            // The shared week-wide titleFontSize is sized to fit a FULL column — squeezed into a
+            // 2- or 3-way overlap slot, that font forced titles into unreadable one-letter-per-line
+            // wrapping. Overlapping events size their own text to their own (narrower) slot instead.
+            val slotTitleFontSize = if (slot.columnCount > 1) {
+                rememberFittingFontSize(
+                    text = event.shortTitle(courseCode),
+                    availableWidth = slotWidth - innerPadding * 2,
+                    maxFontSize = titleFontSize,
+                    minFontSize = 6.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            } else {
+                titleFontSize
+            }
+            val roomFontSize = (slotTitleFontSize.value - 1f).coerceAtLeast(6f).sp
             Box(
                 Modifier
                     .offset(x = left, y = top)
@@ -1161,7 +1186,7 @@ private fun DayColumn(
                     .clip(MaterialTheme.shapes.medium)
                     .background(colorFor(event.title).copy(alpha = 0.9f))
                     .clickable { onEventClick(event) }
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                    .padding(horizontal = innerPadding, vertical = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
@@ -1170,17 +1195,25 @@ private fun DayColumn(
                 ) {
                     Text(
                         event.shortTitle(courseCode),
-                        style = WeekCardTitleStyle.copy(fontSize = titleFontSize, lineHeight = (titleFontSize.value * 1.15f).sp),
+                        style = WeekCardTitleStyle.copy(fontSize = slotTitleFontSize, lineHeight = (slotTitleFontSize.value * 1.15f).sp),
                         textAlign = TextAlign.Center,
                         color = Color.White,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    event.shortRoom()?.let { room ->
-                        Text(
-                            room,
-                            style = WeekCardRoomStyle.copy(fontSize = roomFontSize, lineHeight = (roomFontSize.value * 1.15f).sp),
-                            textAlign = TextAlign.Center,
-                            color = Color.White.copy(alpha = 0.85f),
-                        )
+                    // Skip the room line in tight (3+) overlaps — there's no space left for it to
+                    // add anything readable; a tap still shows it in the detail dialog.
+                    if (slot.columnCount <= 2) {
+                        event.shortRoom()?.let { room ->
+                            Text(
+                                room,
+                                style = WeekCardRoomStyle.copy(fontSize = roomFontSize, lineHeight = (roomFontSize.value * 1.15f).sp),
+                                textAlign = TextAlign.Center,
+                                color = Color.White.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             }
