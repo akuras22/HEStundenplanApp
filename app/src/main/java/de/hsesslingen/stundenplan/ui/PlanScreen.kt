@@ -17,6 +17,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,6 +91,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -282,6 +286,10 @@ private fun GlassIconButton(icon: ImageVector, contentDescription: String, onCli
             .size(44.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f))
+            // Merges the Icon's contentDescription below into this Box's own clickable semantics
+            // node, so TalkBack reads "double tap to activate: <label>" as one stop instead of
+            // landing on the clickable container and the icon's label as two separate ones.
+            .semantics(mergeDescendants = true) {}
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -599,7 +607,10 @@ private fun BottomNavPill(
             .shadow(3.dp, PillShape)
             .clip(PillShape)
             .background(if (dark) OneUiNavTrackDark else OneUiNavTrackLight)
-            .padding(OneUiNavTrackPadding),
+            .padding(OneUiNavTrackPadding)
+            // Tells TalkBack these two tabs are a mutually-exclusive group, matching how a
+            // Woche/Tag switch actually behaves — pairs with Role.Tab on each item below.
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(-OneUiNavSegmentOverlap),
     ) {
         BottomNavItem(
@@ -641,7 +652,11 @@ private fun BottomNavItem(
             .size(OneUiNavSegmentWidth, OneUiNavSegmentHeight)
             .clip(PillShape)
             .background(bg)
-            .clickable(onClick = onClick),
+            // selectable (not plain clickable) announces this as a tab to TalkBack, including
+            // selected/unselected state — the label Text below supplies the accessible name via
+            // the default semantics merge, so the icon stays purely decorative (contentDescription
+            // = null) instead of announcing "Woche, view week icon, Woche" twice over.
+            .selectable(selected = selected, onClick = onClick, role = Role.Tab),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.5.dp, Alignment.CenterVertically),
     ) {

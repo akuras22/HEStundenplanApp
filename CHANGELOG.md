@@ -2,6 +2,11 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.23
+
+- **Barrierefreiheit verbessert**: Die untere Navigationsleiste und die Kopfzeilen-Symbole (Heute, Datum wählen, Aktualisieren, Einstellungen) werden von Vorlesefunktionen wie TalkBack jetzt korrekt als ein einzelnes, klar benanntes Element erkannt statt als zwei getrennte.
+- **Kleinere App**: Die App ist jetzt deutlich kleiner (App-interne Optimierung), ohne dass sich am Verhalten etwas ändert.
+
 ## Version 1.0.22
 
 - **Homescreen-Widget**: Neues Widget, das die nächste anstehende Veranstaltung anzeigt (Titel, Uhrzeit, Raum), ohne die App öffnen zu müssen. Zum Startbildschirm hinzufügen wie jedes andere Widget auch. Aktualisiert sich automatisch, sobald die App im Hintergrund neue Daten lädt.
