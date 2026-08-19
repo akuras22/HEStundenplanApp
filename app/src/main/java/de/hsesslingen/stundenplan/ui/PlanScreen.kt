@@ -442,7 +442,9 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                 onSelect = { viewMode = it },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                    // 8.5dp above the bottom edge, matching the reference (measured 32px at
+                    // 3.748px/dp); this used to sit at 20dp, i.e. noticeably too high.
+                    .padding(horizontal = 20.dp, vertical = 8.5.dp),
             )
         }
     }
@@ -523,15 +525,22 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
 // line box drive it is what previously made the selected pill grow taller than the track and poke
 // out of it at the top and bottom.
 private val OneUiNavTrackDark = Color(0xFF252528)
-private val OneUiNavSelectedDark = Color(0xFF3B3B3E)
 private val OneUiNavSelectedContentDark = Color(0xFFFCFBFE)
 private val OneUiNavUnselectedContentDark = Color(0xFFE8E7EA)
 // Light-mode counterparts (Samsung inverts the relationship: the selected segment becomes the
 // lightest surface rather than the darkest).
 private val OneUiNavTrackLight = Color(0xFFE4E4E7)
-private val OneUiNavSelectedLight = Color(0xFFFCFCFD)
 private val OneUiNavSelectedContentLight = Color(0xFF17171A)
 private val OneUiNavUnselectedContentLight = Color(0xFF48484B)
+
+// The selected segment is a TRANSLUCENT white wash, not a solid fill — 10% over the dark track
+// yields exactly the measured #3B3B3E, and where the two overlapping segments meet, two washes
+// stack to the measured #4F4F51. Painting it solid instead looks identical while only one segment
+// is lit, but breaks the moment both are: whichever segment draws last would paint over the
+// other's press highlight, so the overlap lens only appeared when the LEFT tab was the selected
+// one. Translucent layers commute, so it now reads the same in both directions.
+private const val OneUiNavSelectedWashDark = 0.10f
+private const val OneUiNavSelectedWashLight = 0.89f
 
 private val OneUiNavSegmentWidth = 123.8.dp
 private val OneUiNavSegmentHeight = 51.2.dp
@@ -581,8 +590,8 @@ private fun BottomNavItem(
     // Deliberately not animated: the reference switches state within a single 60fps frame.
     val bg = when {
         !selected -> Color.Transparent
-        dark -> OneUiNavSelectedDark
-        else -> OneUiNavSelectedLight
+        dark -> Color.White.copy(alpha = OneUiNavSelectedWashDark)
+        else -> Color.White.copy(alpha = OneUiNavSelectedWashLight)
     }
     val fg = when {
         selected -> if (dark) OneUiNavSelectedContentDark else OneUiNavSelectedContentLight

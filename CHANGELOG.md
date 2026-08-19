@@ -2,6 +2,11 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.18
+
+- **Überlappung jetzt in beide Richtungen sichtbar**: Drückt man beide Bereiche gleichzeitig, war die hellere Schnittfläche in der Mitte bisher nur zu sehen, wenn der linke Bereich aktiv war. Grund: Die Auswahlfläche war deckend gefüllt und hat den Druck-Effekt des Nachbarn überdeckt, sobald sie darüber gezeichnet wurde. Sie ist jetzt — wie bei Samsung — leicht durchscheinend, dadurch addieren sich die Flächen unabhängig von der Reihenfolge und es sieht in beide Richtungen gleich aus.
+- **Abstand zum unteren Bildschirmrand korrigiert**: Die Leiste saß rund 3 mm zu weit oben und sitzt jetzt genauso tief wie die von Samsung.
+
 ## Version 1.0.17
 
 - **Untere Leiste in der richtigen Größe**: Sie war rund 6,5 % zu groß, weil bei der letzten Messung von einer falschen Bildschirmdichte des Geräts ausgegangen wurde. Diesmal wurden App und Samsung Wallet in Screenshots vom selben Gerät direkt in Pixeln verglichen — dadurch entfällt die Umrechnung als Fehlerquelle komplett. Höhe, Breite, Innenabstände und Eckenrundung stimmen jetzt auf ein Zehntel Millimeter.
