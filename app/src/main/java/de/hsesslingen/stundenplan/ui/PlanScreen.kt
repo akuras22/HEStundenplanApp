@@ -86,7 +86,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -315,6 +317,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showFavoritesMenu by remember { mutableStateOf(false) }
     val headerHaze = rememberHazeState()
+    val haptics = LocalHapticFeedback.current
 
     // The site serves real per-week data (empty outside term dates, room changes, cancellations),
     // not a recurring template, so every week the user swipes to needs its own live fetch.
@@ -355,7 +358,12 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     BoxWithConstraints(
                         Modifier
                             .weight(1f)
-                            .let { if (showFavoritesSwitcher) it.clickable { showFavoritesMenu = true } else it },
+                            .let {
+                                if (showFavoritesSwitcher) it.clickable {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showFavoritesMenu = true
+                                } else it
+                            },
                     ) {
                         val chevronReserve = if (showFavoritesSwitcher) 28.dp else 0.dp
                         val titleFontSize = rememberFittingSingleLineFontSize(
@@ -514,7 +522,10 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
 
             BottomNavPill(
                 selected = resolvedViewMode,
-                onSelect = { viewMode = it },
+                onSelect = { mode ->
+                    if (mode != resolvedViewMode) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    viewMode = mode
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     // 8.5dp above the bottom edge, matching the reference (measured 32px at
@@ -865,12 +876,46 @@ private fun DayView(
                 }
             }
         }
+        // Only meaningful while actually looking at today — showing "in X Min." for some other
+        // day the user swiped to would just be confusing, not helpful.
+        if (selectedDate == LocalDate.now()) {
+            NextEventCountdownBanner(
+                todayEvents = events.filter { it.appliesOn(selectedDate) },
+                courseCode = courseCode,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
+        }
         Spacer(Modifier.height(8.dp))
         // Pre-compose the adjacent page so it's already laid out when a swipe reaches it instead
         // of building it from scratch mid-gesture, which is what reads as swipe lag/jank.
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
             DayTimeline(date = dayPageToDate(page), events = events, courseCode = courseCode, onEventClick = onEventClick)
         }
+    }
+}
+
+/** "Läuft gerade"/"in X Min." countdown for today's next-or-current event — computed once at
+ *  composition time, same as the day grid's own now-line, rather than ticking live on a timer. */
+@Composable
+private fun NextEventCountdownBanner(todayEvents: List<TimetableEvent>, courseCode: String?, modifier: Modifier = Modifier) {
+    val nowMinutes = LocalTime.now().let { it.hour * 60 + it.minute }
+    val current = todayEvents.firstOrNull { nowMinutes in it.startMinutes until it.endMinutes }
+    val next = todayEvents.filter { it.startMinutes > nowMinutes }.minByOrNull { it.startMinutes }
+    val text = when {
+        current != null -> "Läuft: ${current.shortTitle(courseCode)} · endet in ${current.endMinutes - nowMinutes} Min."
+        next != null -> "In ${next.startMinutes - nowMinutes} Min.: ${next.shortTitle(courseCode)}"
+        else -> return
+    }
+    Row(
+        modifier
+            .clip(PillShape)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(Icons.Filled.Today, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
     }
 }
 

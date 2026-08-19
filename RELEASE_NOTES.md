@@ -1,4 +1,4 @@
-- **Absturz beim Öffnen von "Über die App" behoben**.
-- **"Keine Veranstaltungen"-Hinweis jetzt richtig mittig** im Wochenraster.
-- **Benachrichtigungen-Seite ist jetzt scrollbar**.
-- **Einheitlicher One-UI-Stil** für alle Popups und Schalter.
+- **Widget zeigt jetzt deine eigenen Farben** statt fester Standardfarben.
+- **Countdown in der Tagesansicht** bis zur nächsten (oder laufenden) Veranstaltung.
+- **Studiengänge-Suche gruppiert nach Kürzel-Stamm**, für schnelleres Filtern.
+- **Haptisches Feedback** beim Wechseln von Woche/Tag und beim Studiengang-Dropdown.

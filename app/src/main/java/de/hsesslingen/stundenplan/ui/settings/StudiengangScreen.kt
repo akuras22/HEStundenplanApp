@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -37,6 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,8 +57,21 @@ fun StudiengangScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     val pickerState by viewModel.pickerState.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val favoriteIds = favorites.map { it.id }.toSet()
+    var selectedGroup by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) { viewModel.loadStudiengangList() }
+
+    // QIS doesn't expose a real Fachbereich/department field, only the course code — so "group"
+    // here is derived from it (e.g. "WKB1" -> "WKB") rather than a proper department name. Still
+    // useful as a quick filter once the full list gets long, without claiming to be more than it is.
+    val groups = remember(pickerState.all) {
+        pickerState.all.map { studiengangGroup(it.code) }.distinct().sorted()
+    }
+    val groupFiltered = if (selectedGroup != null) {
+        pickerState.filtered.filter { studiengangGroup(it.code) == selectedGroup }
+    } else {
+        pickerState.filtered
+    }
 
     SettingsPageScaffold(title = "Studiengänge", onBack = onBack) {
         Row(
@@ -93,6 +110,21 @@ fun StudiengangScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         )
 
+        if (groups.size > 1) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 8.dp),
+            ) {
+                item {
+                    GroupChip(label = "Alle", selected = selectedGroup == null, onClick = { selectedGroup = null })
+                }
+                items(groups) { group ->
+                    GroupChip(label = group, selected = selectedGroup == group, onClick = { selectedGroup = group })
+                }
+            }
+        }
+
         when {
             pickerState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -109,7 +141,7 @@ fun StudiengangScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                items(pickerState.filtered, key = { it.id }) { studiengang ->
+                items(groupFiltered, key = { it.id }) { studiengang ->
                     StudiengangRow(
                         studiengang = studiengang,
                         selected = studiengang.id == planState.studiengang?.id,
@@ -175,3 +207,26 @@ private fun StudiengangRow(
         }
     }
 }
+
+@Composable
+private fun GroupChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .clip(PillShape)
+            .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        )
+    }
+}
+
+/** QIS only exposes a Studiengang's short code (e.g. "WKB1"), never a real department/Fachbereich
+ *  name — this strips the trailing semester digits to get a rough grouping key ("WKB1" -> "WKB")
+ *  good enough to cluster same-program semesters together in the picker. */
+private fun studiengangGroup(code: String): String = code.trimEnd { it.isDigit() }.ifBlank { code }

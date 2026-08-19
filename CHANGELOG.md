@@ -2,6 +2,13 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.7.0
+
+- **Widget zeigt jetzt deine eigenen Farben** (Akzent- und Hintergrundfarbe, Hell/Dunkel), statt fester Standardfarben.
+- **Countdown in der Tagesansicht**: zeigt an, wie viele Minuten bis zur nächsten Veranstaltung heute bleiben (oder wie lange die laufende noch geht).
+- **Studiengänge-Suche gruppiert jetzt nach Kürzel-Stamm** (z. B. "WKB"), zum schnelleren Filtern bei vielen Treffern.
+- **Haptisches Feedback** beim Wechseln zwischen Woche/Tag und beim Öffnen des Studiengang-Dropdowns.
+
 ## Version 1.6.2
 
 - **Absturz beim Öffnen von "Über die App" behoben** (App-Icon konnte nicht geladen werden).

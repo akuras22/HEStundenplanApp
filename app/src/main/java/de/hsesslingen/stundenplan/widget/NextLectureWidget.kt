@@ -1,12 +1,14 @@
 package de.hsesslingen.stundenplan.widget
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -17,13 +19,42 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
+import de.hsesslingen.stundenplan.data.AccentPreset
 import de.hsesslingen.stundenplan.data.NextEventResult
 import de.hsesslingen.stundenplan.data.SettingsStore
+import de.hsesslingen.stundenplan.data.ThemeMode
 import de.hsesslingen.stundenplan.data.TimetableCache
 import de.hsesslingen.stundenplan.data.findNextEvent
 import kotlinx.coroutines.flow.first
 import java.time.DayOfWeek
 import java.time.LocalDateTime
+
+/** The widget's own resolved palette — mirrors StundenplanTheme's accent/background logic (see
+ *  ui/theme/Theme.kt) so the widget doesn't look out of place next to a customized in-app theme.
+ *  Computed directly from settings rather than going through Glance's ColorProviders/GlanceTheme
+ *  machinery, since that's built around Material You's day/night resource system, not an
+ *  arbitrary user-picked color. */
+private data class WidgetPalette(val background: Color, val onBackground: Color, val onSurfaceVariant: Color, val accent: Color)
+
+private suspend fun resolvePalette(context: Context, settingsStore: SettingsStore): WidgetPalette {
+    val isDark = when (settingsStore.themeMode.first()) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    }
+    val accentPreset = settingsStore.accentPreset.first()
+    val accent = when {
+        accentPreset == AccentPreset.CUSTOM -> settingsStore.customAccentColor.first()
+        accentPreset != AccentPreset.DEFAULT -> accentPreset.color
+        else -> null
+    } ?: if (isDark) Color(0xFF4DA3FF) else Color(0xFF0381FE)
+    val background = settingsStore.customBackgroundColor.first()
+        ?: if (isDark) Color(0xFF0A0A0A) else Color(0xFFFFFFFF)
+    val onBackground = if (background.luminance() > 0.5f) Color(0xFF17171A) else Color(0xFFF2F2F2)
+    val onSurfaceVariant = onBackground.copy(alpha = 0.7f)
+    return WidgetPalette(background, onBackground, onSurfaceVariant, accent)
+}
 
 /**
  * Home-screen widget showing the next upcoming lecture. Deliberately reads from [TimetableCache]
@@ -35,10 +66,11 @@ import java.time.LocalDateTime
 class NextLectureWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val settingsStore = SettingsStore(context)
+        val palette = resolvePalette(context, settingsStore)
         val studiengang = settingsStore.selectedStudiengang.first()
 
         if (studiengang == null) {
-            provideContent { GlanceTheme { WidgetMessage("Kein Studiengang ausgewählt") } }
+            provideContent { WidgetMessage("Kein Studiengang ausgewählt", palette) }
             return
         }
 
@@ -52,47 +84,45 @@ class NextLectureWidget : GlanceAppWidget() {
         val next = findNextEvent(events, now, hiddenKeys)
 
         provideContent {
-            GlanceTheme {
-                when {
-                    next != null -> WidgetNextEvent(studiengang.code, next)
-                    events.isEmpty() -> WidgetMessage("Noch keine Daten – App öffnen")
-                    else -> WidgetMessage("Keine weiteren Veranstaltungen")
-                }
+            when {
+                next != null -> WidgetNextEvent(studiengang.code, next, palette)
+                events.isEmpty() -> WidgetMessage("Noch keine Daten – App öffnen", palette)
+                else -> WidgetMessage("Keine weiteren Veranstaltungen", palette)
             }
         }
     }
 }
 
 @Composable
-private fun WidgetMessage(text: String) {
+private fun WidgetMessage(text: String, palette: WidgetPalette) {
     Column(
-        modifier = GlanceModifier.fillMaxSize().background(GlanceTheme.colors.background).padding(12.dp),
+        modifier = GlanceModifier.fillMaxSize().background(palette.background).padding(12.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
     ) {
         Text(
             text,
-            style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onBackground),
+            style = TextStyle(fontSize = 13.sp, color = ColorProvider(palette.onSurfaceVariant)),
         )
     }
 }
 
 @Composable
-private fun WidgetNextEvent(courseCode: String, next: NextEventResult) {
+private fun WidgetNextEvent(courseCode: String, next: NextEventResult, palette: WidgetPalette) {
     val event = next.event
     val room = event.room?.substringAfterLast(" - ")?.trim()
     Column(
-        modifier = GlanceModifier.fillMaxSize().background(GlanceTheme.colors.background).padding(12.dp),
+        modifier = GlanceModifier.fillMaxSize().background(palette.background).padding(12.dp),
         verticalAlignment = Alignment.Vertical.CenterVertically,
     ) {
         Text(
             "$courseCode · ${event.day.germanLabel}",
-            style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
+            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ColorProvider(palette.accent)),
         )
         Text(
             event.title,
             maxLines = 2,
-            style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground),
+            style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ColorProvider(palette.onBackground)),
         )
         Text(
             buildString {
@@ -101,7 +131,7 @@ private fun WidgetNextEvent(courseCode: String, next: NextEventResult) {
                 append(event.endLabel)
                 if (!room.isNullOrBlank()) { append(" · "); append(room) }
             },
-            style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onSurfaceVariant),
+            style = TextStyle(fontSize = 12.sp, color = ColorProvider(palette.onSurfaceVariant)),
         )
     }
 }
