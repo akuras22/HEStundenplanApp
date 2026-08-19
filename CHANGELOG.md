@@ -2,6 +2,16 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.6.0
+
+- **Eigene Farben**: Akzentfarbe aus mehreren Vorlagen wählen oder komplett frei einstellen (Akzent + Hintergrund), mit Zurücksetzen-Button.
+- **Hell-Modus-Fehler in der unteren Leiste behoben**: Sie folgte bisher dem System- statt dem App-Design.
+- **"Über die App" komplett überarbeitet**, mit Änderungsprotokoll direkt in der App (statt nur auf GitHub) und Rückmeldungen als Kurzmeldung statt Text.
+- **Kopfzeile animiert**: Studiengang-Titel und der Pfeil beim Wechseln sind jetzt animiert.
+- **Uhrzeiten und Wochentage bleiben immer sichtbar**, auch in Wochen ohne Veranstaltungen.
+- **Mehrere Erinnerungen gleichzeitig möglich**, inklusive frei wählbarer Zeiten.
+- **Neue Einstellung**: App direkt in der Tagesansicht statt der Wochenansicht starten.
+
 ## Version 1.5.0
 
 - **Einstellungen neu aufgeteilt**: eigene Seiten für Studiengänge, Benachrichtigungen, Darstellung und "Über die App", statt einer langen Liste.

@@ -1,12 +1,14 @@
 package de.hsesslingen.stundenplan.ui
 
 import android.app.Application
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import de.hsesslingen.stundenplan.BuildConfig
+import de.hsesslingen.stundenplan.data.AccentPreset
 import de.hsesslingen.stundenplan.data.CalendarExporter
 import de.hsesslingen.stundenplan.data.LectureReminderWorker
 import de.hsesslingen.stundenplan.data.NotificationHelper
@@ -20,9 +22,12 @@ import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.UpdateManager
 import de.hsesslingen.stundenplan.data.friendlyNetworkErrorMessage
 import de.hsesslingen.stundenplan.widget.WidgetUpdater
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -73,6 +78,16 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     private val _updateState = MutableStateFlow(UpdateUiState())
     val updateState: StateFlow<UpdateUiState> = _updateState.asStateFlow()
 
+    /** One-shot action-feedback messages (e.g. "Zwischenspeicher geleert.") shown as a Snackbar
+     *  from MainActivity — a SharedFlow rather than state, so the same message can be posted twice
+     *  in a row and each still shows its own Snackbar. */
+    private val _feedback = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val feedback: SharedFlow<String> = _feedback.asSharedFlow()
+
+    fun postFeedback(message: String) {
+        viewModelScope.launch { _feedback.emit(message) }
+    }
+
     /** Studiengänge starred for quick switching (see [SettingsStore.favoriteStudiengaenge]). */
     val favorites: StateFlow<List<Studiengang>> =
         settingsStore.favoriteStudiengaenge.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -87,9 +102,10 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     val remindersEnabled: StateFlow<Boolean> =
         settingsStore.remindersEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    /** How many minutes before a lecture starts to notify — see [LectureReminderWorker]. */
-    val reminderLeadMinutes: StateFlow<Int> =
-        settingsStore.reminderLeadMinutes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 15)
+    /** Lead times (minutes before a lecture starts) to notify at — see [LectureReminderWorker].
+     *  Several can be active at once, e.g. a 30-min heads-up and a 5-min "starting now" nudge. */
+    val reminderLeadMinutes: StateFlow<Set<Int>> =
+        settingsStore.reminderLeadMinutes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), setOf(15))
 
     /** Whether to use Android's wallpaper-tinted Material You palette (see StundenplanTheme). */
     val dynamicColorEnabled: StateFlow<Boolean> =
@@ -97,6 +113,23 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     val themeMode: StateFlow<ThemeMode> =
         settingsStore.themeMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)
+
+    val accentPreset: StateFlow<AccentPreset> =
+        settingsStore.accentPreset.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccentPreset.DEFAULT)
+
+    val customAccentColor: StateFlow<Color?> =
+        settingsStore.customAccentColor.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val customBackgroundColor: StateFlow<Color?> =
+        settingsStore.customBackgroundColor.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Whether the app should open straight into the single-day Tag view instead of Woche. */
+    val defaultViewIsDay: StateFlow<Boolean> =
+        settingsStore.defaultViewIsDay.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setDefaultViewIsDay(isDay: Boolean) {
+        viewModelScope.launch { settingsStore.setDefaultViewIsDay(isDay) }
+    }
 
     // Live per-week results — QIS shows real per-week data (empty outside term dates, room
     // changes, cancellations), not a recurring template, so each visited week gets its own fetch.
@@ -153,6 +186,15 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
                 // Ignored — see doc comment.
                 onResult(false)
             }
+        }
+    }
+
+    /** Fetches the latest published release's notes for the in-app changelog popup — independent
+     *  of [updateState], since that only ever holds an update newer than the running build. */
+    fun fetchChangelog(onResult: (UpdateInfo?) -> Unit) {
+        viewModelScope.launch {
+            val info = try { updateManager.fetchLatestReleaseNotes() } catch (_: Exception) { null }
+            onResult(info)
         }
     }
 
@@ -312,7 +354,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun setReminderLeadMinutes(minutes: Int) {
+    fun setReminderLeadMinutes(minutes: Set<Int>) {
         viewModelScope.launch { settingsStore.setReminderLeadMinutes(minutes) }
     }
 
@@ -324,6 +366,28 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { settingsStore.setThemeMode(mode) }
     }
 
+    fun setAccentPreset(preset: AccentPreset) {
+        viewModelScope.launch { settingsStore.setAccentPreset(preset) }
+    }
+
+    fun setCustomAccentColor(color: Color) {
+        viewModelScope.launch {
+            settingsStore.setCustomAccentColor(color)
+            settingsStore.setAccentPreset(AccentPreset.CUSTOM)
+        }
+    }
+
+    fun setCustomBackgroundColor(color: Color) {
+        viewModelScope.launch {
+            settingsStore.setCustomBackgroundColor(color)
+            settingsStore.setAccentPreset(AccentPreset.CUSTOM)
+        }
+    }
+
+    fun resetAppearance() {
+        viewModelScope.launch { settingsStore.resetAppearance() }
+    }
+
     /** Manual "Zwischenspeicher leeren" action (Einstellungen ▸ Über die App) — clears both the
      *  in-memory per-session cache and the persisted offline fallback. Always safe: the next
      *  successful live fetch repopulates both. */
@@ -331,6 +395,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         weekCache.clear()
         weekPrefetchInFlight.clear()
         viewModelScope.launch { timetableCache.clearAll() }
+        postFeedback("Zwischenspeicher geleert.")
     }
 
     companion object {

@@ -3,6 +3,7 @@ package de.hsesslingen.stundenplan.ui
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -19,7 +20,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -84,6 +84,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -107,6 +108,7 @@ import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.dayWindowFor
 import de.hsesslingen.stundenplan.data.layoutOverlaps
 import de.hsesslingen.stundenplan.data.Weekday
+import de.hsesslingen.stundenplan.ui.theme.LocalIsDarkTheme
 import de.hsesslingen.stundenplan.ui.theme.PillShape
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -304,7 +306,9 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     val state by viewModel.planState.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
-    var viewMode by remember { mutableStateOf(PlanViewMode.WEEK) }
+    val defaultViewIsDay by viewModel.defaultViewIsDay.collectAsState()
+    var viewMode by remember { mutableStateOf<PlanViewMode?>(null) }
+    val resolvedViewMode = viewMode ?: if (defaultViewIsDay) PlanViewMode.DAY else PlanViewMode.WEEK
     var selectedDate by remember { mutableStateOf(LocalDate.now().nearestWeekday()) }
     var selectedEvent by remember { mutableStateOf<TimetableEvent?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -361,17 +365,33 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                             fontWeight = FontWeight.ExtraBold,
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                title,
-                                style = MaterialTheme.typography.headlineLarge.copy(fontSize = titleFontSize),
-                                fontWeight = FontWeight.ExtraBold,
-                                maxLines = 1,
-                            )
+                            AnimatedContent(
+                                targetState = title,
+                                transitionSpec = {
+                                    (slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it / 2 } + fadeIn(tween(220)))
+                                        .togetherWith(slideOutVertically(tween(220, easing = FastOutSlowInEasing)) { -it / 2 } + fadeOut(tween(150)))
+                                },
+                                label = "headerTitle",
+                            ) { animatedTitle ->
+                                Text(
+                                    animatedTitle,
+                                    style = MaterialTheme.typography.headlineLarge.copy(fontSize = titleFontSize),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                )
+                            }
                             if (showFavoritesSwitcher) {
+                                val chevronRotation by animateFloatAsState(
+                                    targetValue = if (showFavoritesMenu) 180f else 0f,
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    label = "chevronRotation",
+                                )
                                 Icon(
                                     Icons.Filled.ArrowDropDown,
                                     contentDescription = "Studiengang wechseln",
-                                    modifier = Modifier.size(28.dp),
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .graphicsLayer { rotationZ = chevronRotation },
                                 )
                             }
                         }
@@ -420,7 +440,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         }
                         state.error != null -> ErrorState(state.error!!, onRetry = { viewModel.refresh() })
                         else -> AnimatedContent(
-                            targetState = viewMode,
+                            targetState = resolvedViewMode,
                             transitionSpec = {
                                 // "Tag" reads as a zoom into one day of the grid, "Woche" as
                                 // zooming back out — scale/slide direction flips with the target so
@@ -492,7 +512,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
             )
 
             BottomNavPill(
-                selected = viewMode,
+                selected = resolvedViewMode,
                 onSelect = { viewMode = it },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -605,7 +625,7 @@ private fun BottomNavPill(
     onSelect: (PlanViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalIsDarkTheme.current
     Row(
         modifier
             .shadow(3.dp, PillShape)
@@ -640,7 +660,7 @@ private fun BottomNavItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalIsDarkTheme.current
     // Deliberately not animated: the reference switches state within a single 60fps frame.
     val bg = when {
         !selected -> Color.Transparent
@@ -840,17 +860,9 @@ private fun DayView(
 private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCode: String?, onEventClick: (TimetableEvent) -> Unit) {
     val dayEvents = events.filter { it.appliesOn(date) }.sortedBy { it.startMinutes }
 
-    if (dayEvents.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                IconBadge(Icons.Filled.EventBusy, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(12.dp))
-                Text("Keine Veranstaltungen an diesem Tag")
-            }
-        }
-        return
-    }
-
+    // The hour axis/gridlines always render, even for an empty day — only the event cards
+    // themselves (or the "keine Veranstaltungen" placeholder) are what actually differ, so the
+    // grid structure doesn't visibly jump/disappear while swiping between a busy day and a free one.
     val (dayStart, dayEnd) = dayWindowFor(dayEvents)
     val totalHeight = MINUTE_HEIGHT * (dayEnd - dayStart)
 
@@ -907,6 +919,15 @@ private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCod
                                 .width(slotWidth)
                                 .heightIn(min = height),
                         )
+                    }
+                    if (dayEvents.isEmpty()) {
+                        Box(Modifier.fillMaxWidth().height(totalHeight), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconBadge(Icons.Filled.EventBusy, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(12.dp))
+                                Text("Keine Veranstaltungen an diesem Tag")
+                            }
+                        }
                     }
                 }
             }
@@ -1026,17 +1047,9 @@ private fun WeekGrid(
     }
     val allVisible = weekEvents.values.flatten()
 
-    if (allVisible.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                IconBadge(Icons.Filled.EventBusy, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(12.dp))
-                Text("Keine Veranstaltungen gefunden")
-            }
-        }
-        return
-    }
-
+    // The day header row and hour axis/gridlines below always render, even for a week with zero
+    // events — only the event cards (or the "keine Veranstaltungen" placeholder) differ, so
+    // swiping between an empty and a busy week only moves the content, not the grid structure.
     val (dayStart, dayEnd) = dayWindowFor(allVisible)
     val totalMinutes = dayEnd - dayStart
     val totalHeight = MINUTE_HEIGHT * totalMinutes
@@ -1112,6 +1125,15 @@ private fun WeekGrid(
                         columnWidth = columnWidth,
                         onEventClick = onEventClick,
                     )
+                }
+            }
+            if (allVisible.isEmpty()) {
+                Box(Modifier.fillMaxWidth().height(totalHeight), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconBadge(Icons.Filled.EventBusy, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(12.dp))
+                        Text("Keine Veranstaltungen gefunden")
+                    }
                 }
             }
         }
@@ -1444,6 +1466,50 @@ fun UpdateDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        },
+    )
+}
+
+/** In-app "Änderungsprotokoll" popup (Einstellungen ▸ Über die App) — shows the latest release's
+ *  notes without leaving the app, with a button to view the full history on GitHub for anything
+ *  older than that. */
+@Composable
+fun ChangelogDialog(
+    versionName: String,
+    releaseNotes: String?,
+    onOpenGithub: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onOpenGithub) { Text("Alle auf GitHub", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Schließen") }
+        },
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        title = { Text("Änderungsprotokoll", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                Text(versionName, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                if (!releaseNotes.isNullOrBlank()) {
+                    Text(renderReleaseNotesMarkdown(releaseNotes), style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Text(
+                        "Keine Änderungshinweise verfügbar.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         },
     )

@@ -1,4 +1,7 @@
-- **Einstellungen neu aufgeteilt**: eigene Seiten für Studiengänge, Benachrichtigungen, Darstellung und "Über die App", statt einer langen Liste.
-- **Neue Optionen**: Hell/Dunkel/System, dynamische Farben, Erinnerungszeit (15/20/30 Min.), manuelle Update-Prüfung, Zwischenspeicher leeren.
-- **Pfeil-Symbol beim Studiengang-Wechsel**, wenn mehrere Favoriten gesetzt sind.
-- **Update-Hinweis scrollt jetzt**, statt bei langen Änderungsprotokollen abgeschnitten zu werden.
+- **Eigene Farben**: Akzentfarbe aus Vorlagen wählen oder frei einstellen (Akzent + Hintergrund), mit Zurücksetzen-Button.
+- **Hell-Modus-Fehler in der unteren Leiste behoben**.
+- **"Über die App" überarbeitet**, mit Änderungsprotokoll direkt in der App.
+- **Kopfzeile animiert**, inklusive Studiengang-Wechsel-Pfeil.
+- **Uhrzeiten/Wochentage bleiben immer sichtbar**, auch in leeren Wochen.
+- **Mehrere, frei wählbare Erinnerungen** gleichzeitig möglich.
+- **Neu**: App optional direkt in der Tagesansicht starten.

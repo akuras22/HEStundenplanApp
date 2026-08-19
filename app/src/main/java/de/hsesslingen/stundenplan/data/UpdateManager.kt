@@ -30,7 +30,17 @@ class UpdateManager(
         .readTimeout(30, TimeUnit.SECONDS)
         .build(),
 ) {
-    suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(): UpdateInfo? {
+        val info = fetchLatestRelease() ?: return null
+        return if (info.versionCode > BuildConfig.VERSION_CODE) info else null
+    }
+
+    /** Latest published release's notes, regardless of whether it's newer than the running build —
+     *  used for the in-app "Änderungsprotokoll" popup, which should always show something rather
+     *  than only when an update happens to be pending. */
+    suspend fun fetchLatestReleaseNotes(): UpdateInfo? = fetchLatestRelease()
+
+    private suspend fun fetchLatestRelease(): UpdateInfo? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("https://api.github.com/repos/${BuildConfig.GITHUB_REPO}/releases/latest")
             .header("Accept", "application/vnd.github+json")
@@ -40,7 +50,6 @@ class UpdateManager(
             val body = response.body?.string() ?: return@withContext null
             val json = JSONObject(body)
             val remoteVersionCode = json.optString("tag_name").removePrefix("v").toIntOrNull() ?: return@withContext null
-            if (remoteVersionCode <= BuildConfig.VERSION_CODE) return@withContext null
 
             val assets = json.optJSONArray("assets") ?: return@withContext null
             var downloadUrl: String? = null
