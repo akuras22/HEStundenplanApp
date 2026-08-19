@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -40,6 +39,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import de.hsesslingen.stundenplan.ui.theme.OneUiAlertDialog
 import kotlin.math.roundToInt
 
 /** A square saturation/value picker + hue bar + hex field, like the standard Android/Google color
@@ -67,11 +67,10 @@ fun ColorPickerDialog(
         hexText = hexOf(Color(AndroidColor.HSVToColor(floatArrayOf(newHue, newSat, newValue))))
     }
 
-    AlertDialog(
+    OneUiAlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = { onConfirm(color) }) { Text("Übernehmen", fontWeight = FontWeight.Bold) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
-        shape = MaterialTheme.shapes.extraLarge,
         title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
             Column {

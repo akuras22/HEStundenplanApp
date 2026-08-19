@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Article
@@ -33,14 +35,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import de.hsesslingen.stundenplan.BuildConfig
-import de.hsesslingen.stundenplan.R
 import de.hsesslingen.stundenplan.ui.ChangelogDialog
 import de.hsesslingen.stundenplan.ui.StundenplanViewModel
 import de.hsesslingen.stundenplan.ui.theme.PillShape
@@ -59,7 +61,12 @@ fun AboutScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     }
 
     SettingsPageScaffold(title = "Über die App", onBack = onBack) {
-        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(
+            Modifier
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
             AppIdentityHeader()
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -124,6 +131,14 @@ fun AboutScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun AppIdentityHeader() {
+    val context = LocalContext.current
+    // painterResource() can't load an <adaptive-icon> mipmap (it only supports vector/rasterized
+    // drawables) and crashes if given one — going through PackageManager + toBitmap() is what
+    // actually handles the adaptive foreground+background composition correctly.
+    val appIcon = remember {
+        context.packageManager.getApplicationIcon(context.packageName).toBitmap().asImageBitmap()
+    }
+
     Column(
         Modifier
             .fillMaxWidth()
@@ -133,7 +148,7 @@ private fun AppIdentityHeader() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Image(
-            painter = painterResource(R.mipmap.ic_launcher),
+            bitmap = appIcon,
             contentDescription = null,
             modifier = Modifier.size(72.dp).clip(CircleShape),
         )

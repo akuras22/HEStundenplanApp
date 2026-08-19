@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
@@ -54,7 +56,12 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     var showBackgroundPicker by remember { mutableStateOf(false) }
 
     SettingsPageScaffold(title = "Darstellung", onBack = onBack) {
-        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            Modifier
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             SettingsToggleRow(
                 title = "Beim Start Tagesansicht",
                 subtitle = "Öffnet direkt die Tag- statt der Wochenansicht",

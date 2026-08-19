@@ -1,7 +1,4 @@
-- **Echter Farbwähler** (Quadrat + Hex-Eingabe) statt einfacher Schieberegler.
-- **Hintergrundfarbe jetzt getrennt von der Akzentfarbe** einstellbar.
-- **"Dynamische Farben" entfernt**.
-- **"Über die App" nutzt das echte App-Icon**, unnötiger Pfeil entfernt.
-- **"Keine Veranstaltungen"-Hinweis dezenter**.
-- **Benachrichtigungen übersichtlich untereinander**, eigene Zeiten abgetrennt.
-- **Tagesansicht-Option jetzt ganz oben** in Darstellung.
+- **Absturz beim Öffnen von "Über die App" behoben**.
+- **"Keine Veranstaltungen"-Hinweis jetzt richtig mittig** im Wochenraster.
+- **Benachrichtigungen-Seite ist jetzt scrollbar**.
+- **Einheitlicher One-UI-Stil** für alle Popups und Schalter.

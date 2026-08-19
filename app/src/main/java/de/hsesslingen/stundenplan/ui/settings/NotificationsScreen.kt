@@ -17,20 +17,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,6 +47,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.hsesslingen.stundenplan.ui.StundenplanViewModel
+import de.hsesslingen.stundenplan.ui.theme.OneUiAlertDialog
+import de.hsesslingen.stundenplan.ui.theme.OneUiSwitch
 
 private val LEAD_MINUTES_PRESETS = listOf(5, 10, 15, 20, 30, 45, 60)
 
@@ -88,7 +89,12 @@ fun NotificationsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     val customMinutes = leadMinutesSet.filterNot { it in LEAD_MINUTES_PRESETS }.sorted()
 
     SettingsPageScaffold(title = "Benachrichtigungen", onBack = onBack) {
-        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            Modifier
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             SettingsToggleRow(
                 title = "Vorlesungserinnerungen",
                 subtitle = "Benachrichtigung vor Beginn einer Veranstaltung",
@@ -195,7 +201,7 @@ private fun LeadMinutesRow(minutes: Int, selected: Boolean, onClick: () -> Unit,
 private fun CustomLeadMinutesDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf("") }
     val minutes = text.toIntOrNull()
-    AlertDialog(
+    OneUiAlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = { minutes?.let(onConfirm) }, enabled = minutes != null && minutes > 0) {
@@ -203,7 +209,6 @@ private fun CustomLeadMinutesDialog(onConfirm: (Int) -> Unit, onDismiss: () -> U
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
-        shape = MaterialTheme.shapes.extraLarge,
         title = { Text("Eigene Erinnerungszeit", fontWeight = FontWeight.Bold) },
         text = {
             OutlinedTextField(
@@ -234,10 +239,6 @@ fun SettingsToggleRow(title: String, subtitle: String, checked: Boolean, onCheck
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
-        )
+        OneUiSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

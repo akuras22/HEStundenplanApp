@@ -109,6 +109,7 @@ import de.hsesslingen.stundenplan.data.dayWindowFor
 import de.hsesslingen.stundenplan.data.layoutOverlaps
 import de.hsesslingen.stundenplan.data.Weekday
 import de.hsesslingen.stundenplan.ui.theme.LocalIsDarkTheme
+import de.hsesslingen.stundenplan.ui.theme.OneUiAlertDialog
 import de.hsesslingen.stundenplan.ui.theme.PillShape
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -1143,10 +1144,17 @@ private fun WeekGrid(
                 }
             }
             if (allVisible.isEmpty()) {
-                EmptyScheduleBanner(
-                    text = "Keine Veranstaltungen in dieser Woche",
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
-                )
+                // Centered over just the day columns, not the time axis to their left — otherwise
+                // aligning within the full-width Box (axis included) visibly skews it off-center.
+                Box(
+                    Modifier
+                        .padding(start = TIME_AXIS_WIDTH)
+                        .width(columnWidth * 5)
+                        .align(Alignment.TopCenter),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    EmptyScheduleBanner(text = "Keine Veranstaltungen in dieser Woche", modifier = Modifier.padding(top = 16.dp))
+                }
             }
         }
             // Scroll headroom so the last hour can clear the floating bottom nav bar.
@@ -1371,7 +1379,7 @@ private fun DayColumn(
 private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHidden: (Boolean) -> Unit, onDismiss: () -> Unit) {
     // Samsung's own dialogs (e.g. Gallery "Details") use a plain near-black card, a bold
     // left-aligned title with no colored banner, and simple stacked label/value rows.
-    AlertDialog(
+    OneUiAlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen", fontWeight = FontWeight.Bold) } },
         dismissButton = {
@@ -1382,9 +1390,6 @@ private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHi
                 Text(if (hidden) "Wieder einblenden" else "Ausblenden")
             }
         },
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
         title = { Text(event.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
         text = {
             Column {
@@ -1436,7 +1441,7 @@ fun UpdateDialog(
     onInstall: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    OneUiAlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onInstall) {
@@ -1446,9 +1451,6 @@ fun UpdateDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Später") }
         },
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
         title = { Text("Update verfügbar: ${info.versionName}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
         text = {
             // Bounded height + explicit scroll: AlertDialog's text slot doesn't scroll on its own,
@@ -1493,7 +1495,7 @@ fun ChangelogDialog(
     onOpenGithub: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    OneUiAlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onOpenGithub) { Text("Alle auf GitHub", fontWeight = FontWeight.Bold) }
@@ -1501,9 +1503,6 @@ fun ChangelogDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Schließen") }
         },
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
         title = { Text("Änderungsprotokoll", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
         text = {
             Column(

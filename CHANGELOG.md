@@ -2,6 +2,13 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.6.2
+
+- **Absturz beim Öffnen von "Über die App" behoben** (App-Icon konnte nicht geladen werden).
+- **"Keine Veranstaltungen in dieser Woche" jetzt richtig mittig** über dem Wochenraster statt versetzt.
+- **Benachrichtigungen-Seite ist jetzt scrollbar**, auch bei vielen eigenen Erinnerungszeiten.
+- **Einheitlicher One-UI-Stil**: alle Popups und Schalter in der App sehen jetzt gleich aus (rundere Schalter, flachere Popups ohne Farbschimmer).
+
 ## Version 1.6.1
 
 - **Echter Farbwähler**: quadratischer Sättigung/Helligkeit-Picker mit Hex-Eingabe statt einfacher Schieberegler.
