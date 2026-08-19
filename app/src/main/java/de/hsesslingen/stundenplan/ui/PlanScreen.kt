@@ -1421,6 +1421,15 @@ private fun UpdateDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.height(8.dp))
+                // The app can't clean this file up itself: doing so would mean handling the
+                // downloaded APK directly, which is exactly the behavior that got flagged by
+                // Google Play Protect before (see UpdateManager) — so this is a manual step.
+                Text(
+                    "Die heruntergeladene Datei bleibt danach in den Downloads liegen und kann von dort gelöscht werden.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )

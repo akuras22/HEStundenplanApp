@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.24
+
+- **Weniger doppelte Download-Dateien**: Jedes Update hieß bisher exakt gleich ("HEStundenplan.apk"), wodurch der Browser bei mehrfachem Herunterladen automatisch "(1)", "(2)" usw. anhängen musste. Der Dateiname enthält jetzt die Versionsnummer, wodurch das nicht mehr passiert. Die heruntergeladene Datei bleibt nach der Installation trotzdem in den Downloads liegen — die App kann sie aus denselben Gründen wie beim letzten Mal (Play Protect) nicht selbst löschen, das lässt sich aber jederzeit manuell in den Downloads erledigen.
+
 ## Version 1.0.23
 
 - **Barrierefreiheit verbessert**: Die untere Navigationsleiste und die Kopfzeilen-Symbole (Heute, Datum wählen, Aktualisieren, Einstellungen) werden von Vorlesefunktionen wie TalkBack jetzt korrekt als ein einzelnes, klar benanntes Element erkannt statt als zwei getrennte.

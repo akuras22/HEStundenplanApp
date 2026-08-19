@@ -46,7 +46,11 @@ jobs:
         run: ./gradlew assembleRelease --console=plain
 
       - name: Rename APK for release
-        run: cp app/build/outputs/apk/release/app-release.apk HEStundenplan.apk
+        # A version-qualified filename (instead of always the same "HEStundenplan.apk") means the
+        # browser sees a genuinely new file name on every release and just saves it — it only
+        # started appending "(1)", "(2)", ... on repeat downloads because every past release
+        # reused that identical name, and Chrome won't overwrite an existing download by default.
+        run: cp app/build/outputs/apk/release/app-release.apk "HEStundenplan-${{ env.APP_VERSION_NAME }}.apk"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -54,4 +58,4 @@ jobs:
           tag_name: v${{ github.run_number }}
           name: "${{ env.APP_VERSION_NAME }}"
           body_path: RELEASE_NOTES.md
-          files: HEStundenplan.apk
+          files: HEStundenplan-${{ env.APP_VERSION_NAME }}.apk
