@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.20
+
+- **Stundenplan als Kalenderdatei exportieren**: In den Einstellungen gibt es jetzt oben ein Kalender-Symbol, das den aktuell geladenen Stundenplan als .ics-Datei zum Import in eine beliebige Kalender-App (Google Kalender, Samsung Kalender, …) freigibt — inklusive aller Wochentermine für das ganze Semester, nicht nur die aktuell sichtbare Woche.
+
 ## Version 1.0.19
 
 - **Veranstaltungen nach 19 Uhr werden nicht mehr abgeschnitten**: Das Zeitraster ging bisher immer von 8 bis 19 Uhr. Ein Studiengang mit einem Termin bis 21 Uhr wäre am unteren Rand einfach verschwunden. Das Raster passt sich jetzt automatisch an, wenn eine Veranstaltung früher beginnt oder später endet.

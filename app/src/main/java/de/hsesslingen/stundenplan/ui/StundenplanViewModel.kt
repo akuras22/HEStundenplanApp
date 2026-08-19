@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.hsesslingen.stundenplan.BuildConfig
+import de.hsesslingen.stundenplan.data.CalendarExporter
 import de.hsesslingen.stundenplan.data.QisRepository
 import de.hsesslingen.stundenplan.data.SettingsStore
 import de.hsesslingen.stundenplan.data.Studiengang
@@ -53,6 +54,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     private val settingsStore = SettingsStore(application)
     private val updateManager = UpdateManager(application)
     private val timetableCache = TimetableCache(application)
+    private val calendarExporter = CalendarExporter(application)
 
     private val _planState = MutableStateFlow(PlanUiState())
     val planState: StateFlow<PlanUiState> = _planState.asStateFlow()
@@ -190,6 +192,15 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         val monday = _planState.value.weekMonday ?: return
         weekCache.remove(monday)
         loadWeek(monday)
+    }
+
+    /** Shares the currently loaded week's events as an .ics file — see [buildIcs] for why one
+     *  week's fetch is enough to cover the whole semester. No-op if nothing has loaded yet. */
+    fun exportIcs() {
+        val state = _planState.value
+        val studiengang = state.studiengang ?: return
+        if (state.events.isEmpty()) return
+        calendarExporter.shareAsIcs(state.events, studiengang.code)
     }
 
     fun loadStudiengangList(forceReload: Boolean = false) {

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
@@ -78,7 +79,17 @@ fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                     "Studiengang wählen",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f),
                 )
+                // Exports the currently loaded week's events as .ics — covers the whole semester
+                // in one go since QIS reports each event's full recurrence on every week's page,
+                // not just the visited one (see IcsExporter). Only meaningful once a week has
+                // actually loaded.
+                if (planState.events.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.exportIcs() }) {
+                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Als Kalender exportieren")
+                    }
+                }
             }
 
             OutlinedTextField(
