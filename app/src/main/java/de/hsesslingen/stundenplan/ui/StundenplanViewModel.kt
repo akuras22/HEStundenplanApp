@@ -380,7 +380,6 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     fun setCustomBackgroundColor(color: Color) {
         viewModelScope.launch {
             settingsStore.setCustomBackgroundColor(color)
-            settingsStore.setAccentPreset(AccentPreset.CUSTOM)
         }
     }
 

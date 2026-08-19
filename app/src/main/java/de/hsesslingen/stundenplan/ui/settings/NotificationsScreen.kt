@@ -8,20 +8,25 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -43,7 +48,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.hsesslingen.stundenplan.ui.StundenplanViewModel
-import de.hsesslingen.stundenplan.ui.theme.PillShape
 
 private val LEAD_MINUTES_PRESETS = listOf(5, 10, 15, 20, 30, 45, 60)
 
@@ -76,8 +80,12 @@ fun NotificationsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
         viewModel.setReminderLeadMinutes(updated.ifEmpty { setOf(15) })
     }
 
-    // Custom lead times the user typed in show up alongside the presets, ordered together.
-    val allChipMinutes = (LEAD_MINUTES_PRESETS + leadMinutesSet).distinct().sorted()
+    fun removeCustomLead(minutes: Int) {
+        viewModel.setReminderLeadMinutes((leadMinutesSet - minutes).ifEmpty { setOf(15) })
+    }
+
+    // Custom lead times the user typed in that aren't one of the presets get their own section.
+    val customMinutes = leadMinutesSet.filterNot { it in LEAD_MINUTES_PRESETS }.sorted()
 
     SettingsPageScaffold(title = "Benachrichtigungen", onBack = onBack) {
         Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -89,23 +97,49 @@ fun NotificationsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
             )
             if (enabled) {
                 Column {
-                    Text(
-                        "Erinnerungen (mehrere möglich)",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(allChipMinutes) { minutes ->
-                            LeadMinutesChip(
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Erinnerungen (mehrere möglich)",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        IconButton(onClick = { showCustomDialog = true }) {
+                            Icon(Icons.Filled.Add, contentDescription = "Eigene Erinnerungszeit hinzufügen")
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LEAD_MINUTES_PRESETS.forEach { minutes ->
+                            LeadMinutesRow(
                                 minutes = minutes,
                                 selected = minutes in leadMinutesSet,
                                 onClick = { toggleLead(minutes) },
                             )
                         }
-                        item {
-                            AddCustomChip(onClick = { showCustomDialog = true })
+                    }
+                    if (customMinutes.isNotEmpty()) {
+                        HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                        Text(
+                            "Eigene Zeiten",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            customMinutes.forEach { minutes ->
+                                LeadMinutesRow(
+                                    minutes = minutes,
+                                    selected = true,
+                                    onClick = { toggleLead(minutes) },
+                                    onRemove = { removeCustomLead(minutes) },
+                                )
+                            }
                         }
                     }
                 }
@@ -125,34 +159,35 @@ fun NotificationsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
 }
 
 @Composable
-private fun LeadMinutesChip(minutes: Int, selected: Boolean, onClick: () -> Unit) {
+private fun LeadMinutesRow(minutes: Int, selected: Boolean, onClick: () -> Unit, onRemove: (() -> Unit)? = null) {
     Row(
         Modifier
-            .clip(PillShape)
-            .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh)
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            "$minutes Min.",
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-        )
-    }
-}
-
-@Composable
-private fun AddCustomChip(onClick: () -> Unit) {
-    Row(
-        Modifier
-            .clip(PillShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Filled.Add, contentDescription = "Eigene Erinnerungszeit", modifier = Modifier.height(18.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(
+                Modifier.size(28.dp).clip(CircleShape).background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (selected) Icon(Icons.Filled.NotificationsActive, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(14.dp))
+            }
+            Text(
+                "$minutes Min. vorher",
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (onRemove != null) {
+            IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Filled.Close, contentDescription = "Entfernen", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 

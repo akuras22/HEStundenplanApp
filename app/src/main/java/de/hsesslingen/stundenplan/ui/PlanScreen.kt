@@ -761,6 +761,24 @@ private fun OfflineBanner(since: Long?) {
     }
 }
 
+/** Compact "no events" pill anchored at the top of the grid content — deliberately not a big
+ *  centered block covering the whole timeline, since the hour axis/day header around it are
+ *  meant to keep reading as the same grid whether or not there's anything in it. */
+@Composable
+private fun EmptyScheduleBanner(text: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .clip(PillShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(Icons.Filled.EventBusy, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
 @Composable
 private fun IconBadge(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary) {
     Box(
@@ -921,13 +939,10 @@ private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCod
                         )
                     }
                     if (dayEvents.isEmpty()) {
-                        Box(Modifier.fillMaxWidth().height(totalHeight), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                IconBadge(Icons.Filled.EventBusy, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.height(12.dp))
-                                Text("Keine Veranstaltungen an diesem Tag")
-                            }
-                        }
+                        EmptyScheduleBanner(
+                            text = "Keine Veranstaltungen an diesem Tag",
+                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+                        )
                     }
                 }
             }
@@ -1128,13 +1143,10 @@ private fun WeekGrid(
                 }
             }
             if (allVisible.isEmpty()) {
-                Box(Modifier.fillMaxWidth().height(totalHeight), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        IconBadge(Icons.Filled.EventBusy, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(12.dp))
-                        Text("Keine Veranstaltungen gefunden")
-                    }
-                }
+                EmptyScheduleBanner(
+                    text = "Keine Veranstaltungen in dieser Woche",
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+                )
             }
         }
             // Scroll headroom so the last hour can clear the floating bottom nav bar.

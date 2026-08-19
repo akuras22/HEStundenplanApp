@@ -2,6 +2,16 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.6.1
+
+- **Echter Farbwähler**: quadratischer Sättigung/Helligkeit-Picker mit Hex-Eingabe statt einfacher Schieberegler.
+- **Hintergrundfarbe jetzt eigenständig einstellbar**, getrennt von der Akzentfarbe.
+- **"Dynamische Farben" entfernt** (unnötige Option).
+- **"Über die App" nutzt jetzt das echte App-Icon**, unnötiger Pfeil bei "Zwischenspeicher leeren" entfernt.
+- **"Keine Veranstaltungen"-Hinweis kleiner und unaufdringlicher**, statt mittig über dem ganzen Raster.
+- **Benachrichtigungen jetzt übersichtlich untereinander**, eigene Zeiten von den Voreinstellungen getrennt.
+- **Tagesansicht-Option steht jetzt ganz oben** in Darstellung, mit Trenner zu den Farboptionen.
+
 ## Version 1.6.0
 
 - **Eigene Farben**: Akzentfarbe aus mehreren Vorlagen wählen oder komplett frei einstellen (Akzent + Hintergrund), mit Zurücksetzen-Button.

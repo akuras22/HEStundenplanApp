@@ -1,7 +1,7 @@
-- **Eigene Farben**: Akzentfarbe aus Vorlagen wählen oder frei einstellen (Akzent + Hintergrund), mit Zurücksetzen-Button.
-- **Hell-Modus-Fehler in der unteren Leiste behoben**.
-- **"Über die App" überarbeitet**, mit Änderungsprotokoll direkt in der App.
-- **Kopfzeile animiert**, inklusive Studiengang-Wechsel-Pfeil.
-- **Uhrzeiten/Wochentage bleiben immer sichtbar**, auch in leeren Wochen.
-- **Mehrere, frei wählbare Erinnerungen** gleichzeitig möglich.
-- **Neu**: App optional direkt in der Tagesansicht starten.
+- **Echter Farbwähler** (Quadrat + Hex-Eingabe) statt einfacher Schieberegler.
+- **Hintergrundfarbe jetzt getrennt von der Akzentfarbe** einstellbar.
+- **"Dynamische Farben" entfernt**.
+- **"Über die App" nutzt das echte App-Icon**, unnötiger Pfeil entfernt.
+- **"Keine Veranstaltungen"-Hinweis dezenter**.
+- **Benachrichtigungen übersichtlich untereinander**, eigene Zeiten abgetrennt.
+- **Tagesansicht-Option jetzt ganz oben** in Darstellung.

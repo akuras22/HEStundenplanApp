@@ -20,11 +20,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,17 +44,26 @@ import de.hsesslingen.stundenplan.ui.theme.PillShape
 
 @Composable
 fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
-    val dynamicColor by viewModel.dynamicColorEnabled.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val accentPreset by viewModel.accentPreset.collectAsState()
     val customAccentColor by viewModel.customAccentColor.collectAsState()
     val customBackgroundColor by viewModel.customBackgroundColor.collectAsState()
     val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
     val defaultViewIsDay by viewModel.defaultViewIsDay.collectAsState()
-    var showCustomPicker by remember { mutableStateOf(false) }
+    var showAccentPicker by remember { mutableStateOf(false) }
+    var showBackgroundPicker by remember { mutableStateOf(false) }
 
     SettingsPageScaffold(title = "Darstellung", onBack = onBack) {
         Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            SettingsToggleRow(
+                title = "Beim Start Tagesansicht",
+                subtitle = "Öffnet direkt die Tag- statt der Wochenansicht",
+                checked = defaultViewIsDay,
+                onCheckedChange = { viewModel.setDefaultViewIsDay(it) },
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
             SectionLabel("Design")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ThemeModeChip("System", ThemeMode.SYSTEM, themeMode) { viewModel.setThemeMode(it) }
@@ -64,42 +71,36 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 ThemeModeChip("Dunkel", ThemeMode.DARK, themeMode) { viewModel.setThemeMode(it) }
             }
 
-            SettingsToggleRow(
-                title = "Dynamische Farben",
-                subtitle = "Farben an dein Hintergrundbild anpassen, statt der festen App-Farben",
-                checked = dynamicColor,
-                onCheckedChange = { viewModel.setDynamicColorEnabled(it) },
-            )
-
-            if (!dynamicColor) {
-                Column {
-                    SectionLabel("Akzentfarbe")
-                    Spacer(Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(AccentPreset.entries.filter { it != AccentPreset.CUSTOM }) { preset ->
-                            AccentSwatch(
-                                color = preset.color,
-                                selected = accentPreset == preset,
-                                onClick = { viewModel.setAccentPreset(preset) },
-                            )
-                        }
-                        item {
-                            CustomAccentSwatch(
-                                color = customAccentColor,
-                                selected = accentPreset == AccentPreset.CUSTOM,
-                                onClick = { showCustomPicker = true },
-                            )
-                        }
+            Column {
+                SectionLabel("Akzentfarbe")
+                Spacer(Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(AccentPreset.entries.filter { it != AccentPreset.CUSTOM }) { preset ->
+                        ColorSwatch(
+                            color = preset.color,
+                            selected = accentPreset == preset,
+                            onClick = { viewModel.setAccentPreset(preset) },
+                        )
+                    }
+                    item {
+                        CustomColorSwatch(
+                            color = customAccentColor,
+                            selected = accentPreset == AccentPreset.CUSTOM,
+                            onClick = { showAccentPicker = true },
+                        )
                     }
                 }
             }
 
-            SettingsToggleRow(
-                title = "Beim Start Tagesansicht",
-                subtitle = "Öffnet direkt die Tag- statt der Wochenansicht",
-                checked = defaultViewIsDay,
-                onCheckedChange = { viewModel.setDefaultViewIsDay(it) },
-            )
+            Column {
+                SectionLabel("Hintergrundfarbe")
+                Spacer(Modifier.height(8.dp))
+                CustomColorSwatch(
+                    color = customBackgroundColor,
+                    selected = customBackgroundColor != null,
+                    onClick = { showBackgroundPicker = true },
+                )
+            }
 
             TextButton(onClick = { viewModel.resetAppearance() }) {
                 Icon(Icons.Filled.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -116,16 +117,26 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
         }
     }
 
-    if (showCustomPicker) {
-        CustomColorDialog(
-            initialAccent = customAccentColor ?: MaterialTheme.colorScheme.primary,
-            initialBackground = customBackgroundColor ?: MaterialTheme.colorScheme.background,
-            onConfirm = { accent, background ->
-                viewModel.setCustomAccentColor(accent)
-                viewModel.setCustomBackgroundColor(background)
-                showCustomPicker = false
+    if (showAccentPicker) {
+        ColorPickerDialog(
+            title = "Akzentfarbe",
+            initialColor = customAccentColor ?: MaterialTheme.colorScheme.primary,
+            onConfirm = {
+                viewModel.setCustomAccentColor(it)
+                showAccentPicker = false
             },
-            onDismiss = { showCustomPicker = false },
+            onDismiss = { showAccentPicker = false },
+        )
+    }
+    if (showBackgroundPicker) {
+        ColorPickerDialog(
+            title = "Hintergrundfarbe",
+            initialColor = customBackgroundColor ?: MaterialTheme.colorScheme.background,
+            onConfirm = {
+                viewModel.setCustomBackgroundColor(it)
+                showBackgroundPicker = false
+            },
+            onDismiss = { showBackgroundPicker = false },
         )
     }
 }
@@ -154,7 +165,7 @@ private fun ThemeModeChip(label: String, mode: ThemeMode, selected: ThemeMode, o
 }
 
 @Composable
-private fun AccentSwatch(color: Color?, selected: Boolean, onClick: () -> Unit) {
+private fun ColorSwatch(color: Color?, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .size(44.dp)
@@ -169,7 +180,7 @@ private fun AccentSwatch(color: Color?, selected: Boolean, onClick: () -> Unit) 
 }
 
 @Composable
-private fun CustomAccentSwatch(color: Color?, selected: Boolean, onClick: () -> Unit) {
+private fun CustomColorSwatch(color: Color?, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .size(44.dp)
@@ -179,61 +190,7 @@ private fun CustomAccentSwatch(color: Color?, selected: Boolean, onClick: () -> 
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Filled.Edit, contentDescription = "Benutzerdefinierte Farbe", tint = if (color != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-    }
-}
-
-/** Simple RGB-slider color picker for the fully custom accent/background option — no external
- *  color-picker dependency needed for three sliders each. */
-@Composable
-private fun CustomColorDialog(
-    initialAccent: Color,
-    initialBackground: Color,
-    onConfirm: (accent: Color, background: Color) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var accent by remember { mutableStateOf(initialAccent) }
-    var background by remember { mutableStateOf(initialBackground) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onConfirm(accent, background) }) { Text("Übernehmen", fontWeight = FontWeight.Bold) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
-        shape = MaterialTheme.shapes.extraLarge,
-        title = { Text("Eigene Farben", fontWeight = FontWeight.Bold) },
-        text = {
-            Column {
-                Text("Akzentfarbe", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                RgbSliders(color = accent, onChange = { accent = it })
-                Spacer(Modifier.height(16.dp))
-                Text("Hintergrund", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                RgbSliders(color = background, onChange = { background = it })
-            }
-        },
-    )
-}
-
-@Composable
-private fun RgbSliders(color: Color, onChange: (Color) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
-        Box(Modifier.size(32.dp).clip(CircleShape).background(color).border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape))
-        Spacer(Modifier.width(12.dp))
-        Text("%02X%02X%02X".format((color.red * 255).toInt(), (color.green * 255).toInt(), (color.blue * 255).toInt()), style = MaterialTheme.typography.bodySmall)
-    }
-    ColorChannelSlider("R", color.red) { onChange(color.copy(red = it)) }
-    ColorChannelSlider("G", color.green) { onChange(color.copy(green = it)) }
-    ColorChannelSlider("B", color.blue) { onChange(color.copy(blue = it)) }
-}
-
-@Composable
-private fun ColorChannelSlider(label: String, value: Float, onChange: (Float) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, modifier = Modifier.width(16.dp), style = MaterialTheme.typography.labelSmall)
-        Slider(
-            value = value,
-            onValueChange = onChange,
-            colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary),
-        )
+        Icon(Icons.Filled.Edit, contentDescription = "Eigene Farbe wählen", tint = if (color != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
     }
 }
 

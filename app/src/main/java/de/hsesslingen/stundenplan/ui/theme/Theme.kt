@@ -53,11 +53,13 @@ private val OneUiLightColorScheme = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE1E5EB),
 )
 
-/** Re-tints a base scheme's accent-related colors to [accent], optionally overriding
- *  [background]/surface too — used for accent presets and the fully custom option. Neutral colors
- *  (nav bar, text, dividers) are left as-is so the app keeps its One UI look regardless of accent. */
-private fun tintedColorScheme(darkTheme: Boolean, accent: Color, background: Color?): ColorScheme {
+/** Re-tints a base scheme's accent-related colors to [accent] (falls back to the base scheme's own
+ *  accent when null, e.g. a custom background with the default accent preset), optionally
+ *  overriding [background]/surface too. Neutral colors (nav bar, text, dividers) are left as-is so
+ *  the app keeps its One UI look regardless of accent/background. */
+private fun tintedColorScheme(darkTheme: Boolean, accent: Color?, background: Color?): ColorScheme {
     val base = if (darkTheme) OneUiDarkColorScheme else OneUiLightColorScheme
+    if (accent == null) return base.copy(background = background ?: base.background, surface = background ?: base.surface)
     val onAccent = if (accent.luminance() > 0.5f) Color(0xFF00214D) else Color.White
     val containerBase = if (darkTheme) Color.Black else Color.White
     return base.copy(
@@ -87,13 +89,16 @@ fun StundenplanTheme(
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
+    val accentOverride = when {
+        accentPreset == AccentPreset.CUSTOM -> customAccentColor ?: OneUiBlue
+        accentPreset != AccentPreset.DEFAULT -> accentPreset.color
+        else -> null
+    }
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        accentPreset == AccentPreset.CUSTOM ->
-            tintedColorScheme(darkTheme, customAccentColor ?: OneUiBlue, customBackgroundColor)
-        accentPreset != AccentPreset.DEFAULT ->
-            tintedColorScheme(darkTheme, accentPreset.color ?: OneUiBlue, null)
+        accentOverride != null || customBackgroundColor != null ->
+            tintedColorScheme(darkTheme, accentOverride, customBackgroundColor)
         darkTheme -> OneUiDarkColorScheme
         else -> OneUiLightColorScheme
     }
