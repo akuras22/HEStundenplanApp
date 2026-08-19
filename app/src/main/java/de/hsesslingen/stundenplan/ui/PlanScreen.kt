@@ -1525,6 +1525,16 @@ fun UpdateDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.height(8.dp))
+                // Chrome runs its own Play-Protect scan on downloaded APKs before it lets the
+                // download finish, which can sit at "Wird heruntergeladen…" for a while even
+                // though every byte already arrived — that step happens entirely on-device after
+                // the browser takes over, so the app has no way to speed it up or skip it.
+                Text(
+                    "Falls der Download in Chrome bei 100% hängen bleibt: Das ist Chromes eigene Sicherheitsprüfung der Datei, kein fehlgeschlagener Download — kurz warten oder die Datei antippen reicht meist.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )

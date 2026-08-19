@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.7.1
+
+- **Hinweis zum Update-Download ergänzt**: Wenn der Download in Chrome bei 100% hängen bleibt, ist das Chromes eigene Sicherheitsprüfung der Datei — kein fehlgeschlagener Download. Das läuft komplett außerhalb der App und kann von hier aus nicht beschleunigt werden.
+
 ## Version 1.7.0
 
 - **Widget zeigt jetzt deine eigenen Farben** (Akzent- und Hintergrundfarbe, Hell/Dunkel), statt fester Standardfarben.

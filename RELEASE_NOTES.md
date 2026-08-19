@@ -1,4 +1,1 @@
-- **Widget zeigt jetzt deine eigenen Farben** statt fester Standardfarben.
-- **Countdown in der Tagesansicht** bis zur nächsten (oder laufenden) Veranstaltung.
-- **Studiengänge-Suche gruppiert nach Kürzel-Stamm**, für schnelleres Filtern.
-- **Haptisches Feedback** beim Wechseln von Woche/Tag und beim Studiengang-Dropdown.
+- **Hinweis ergänzt**: Hängt der Download in Chrome bei 100%, ist das Chromes eigene Sicherheitsprüfung — kein fehlgeschlagener Download.
