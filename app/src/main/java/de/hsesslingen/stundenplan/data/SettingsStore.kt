@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
@@ -37,6 +38,8 @@ class SettingsStore(private val context: Context) {
         val HIDDEN_EVENT_KEYS = stringSetPreferencesKey("hidden_event_keys")
         val LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at_millis")
         val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
+        val NOTIFIED_DATE = stringPreferencesKey("notified_date")
+        val NOTIFIED_KEYS = stringSetPreferencesKey("notified_keys")
     }
 
     val selectedStudiengang: Flow<Studiengang?> = context.dataStore.data.map { prefs ->
@@ -93,5 +96,24 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setRemindersEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.REMINDERS_ENABLED] = enabled }
+    }
+
+    /** Whether a reminder for [groupKey] was already sent on [date] (format "yyyy-MM-dd") — the
+     *  reminder worker runs every 15 minutes, so without this it would re-notify for the same
+     *  upcoming lecture on every run until it actually starts. */
+    suspend fun hasNotifiedToday(date: String, groupKey: String): Boolean {
+        val prefs = context.dataStore.data.first()
+        if (prefs[Keys.NOTIFIED_DATE] != date) return false
+        return groupKey in (prefs[Keys.NOTIFIED_KEYS] ?: emptySet())
+    }
+
+    /** Records [groupKey] as notified for [date], resetting the tracked set first if [date] is a
+     *  new day — so this only ever holds one day's worth of keys, never grows unbounded. */
+    suspend fun markNotifiedToday(date: String, groupKey: String) {
+        context.dataStore.edit { prefs ->
+            val sameDay = prefs[Keys.NOTIFIED_DATE] == date
+            prefs[Keys.NOTIFIED_DATE] = date
+            prefs[Keys.NOTIFIED_KEYS] = (if (sameDay) prefs[Keys.NOTIFIED_KEYS] ?: emptySet() else emptySet()) + groupKey
+        }
     }
 }

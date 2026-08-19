@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.21
+
+- **Vorlesungserinnerungen**: Neuer Schalter in den Einstellungen — einmal aktiviert, meldet sich die App etwa 15 Minuten bevor eine Veranstaltung beginnt, inklusive Raum. Ausgeblendete Veranstaltungen (siehe oben) werden dabei übersprungen. Beim ersten Aktivieren fragt Android einmalig nach der Benachrichtigungs-Erlaubnis.
+
 ## Version 1.0.20
 
 - **Stundenplan als Kalenderdatei exportieren**: In den Einstellungen gibt es jetzt oben ein Kalender-Symbol, das den aktuell geladenen Stundenplan als .ics-Datei zum Import in eine beliebige Kalender-App (Google Kalender, Samsung Kalender, …) freigibt — inklusive aller Wochentermine für das ganze Semester, nicht nur die aktuell sichtbare Woche.

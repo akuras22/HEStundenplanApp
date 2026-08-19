@@ -1,5 +1,10 @@
 package de.hsesslingen.stundenplan.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +38,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,8 +49,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import de.hsesslingen.stundenplan.data.Studiengang
 import de.hsesslingen.stundenplan.ui.theme.PillShape
 
@@ -54,7 +63,17 @@ fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     val pickerState by viewModel.pickerState.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
+    val remindersEnabled by viewModel.remindersEnabled.collectAsState()
     val favoriteIds = favorites.map { it.id }.toSet()
+    val context = LocalContext.current
+
+    // Android 13+ requires the POST_NOTIFICATIONS runtime permission before any notification can
+    // show — requested only when the user actually turns reminders on, not proactively at launch.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        // Persist "on" either way: if denied, NotificationHelper just silently no-ops every
+        // individual notification later, and the user can still grant it via system settings.
+        viewModel.setRemindersEnabled(true)
+    }
 
     LaunchedEffect(Unit) { viewModel.loadStudiengangList() }
 
@@ -110,6 +129,21 @@ fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
+            RemindersToggleRow(
+                enabled = remindersEnabled,
+                onToggle = { wantEnabled ->
+                    val needsPermission = wantEnabled &&
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                    if (needsPermission) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        viewModel.setRemindersEnabled(wantEnabled)
+                    }
+                },
+            )
+            Spacer(Modifier.height(4.dp))
+
             if (hiddenGroupKeys.isNotEmpty()) {
                 HiddenGroupsSection(
                     hiddenGroupKeys = hiddenGroupKeys,
@@ -149,6 +183,37 @@ fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** Toggles the background worker that notifies ~15 minutes before a lecture starts — see
+ *  LectureReminderWorker. */
+@Composable
+private fun RemindersToggleRow(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable { onToggle(!enabled) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("Vorlesungserinnerungen", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Benachrichtigung ca. 15 Min. vor Beginn",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
+        )
     }
 }
 

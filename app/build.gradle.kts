@@ -76,6 +76,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     implementation("dev.chrisbanes.haze:haze:1.7.2")
     implementation("dev.chrisbanes.haze:haze-materials:1.7.2")

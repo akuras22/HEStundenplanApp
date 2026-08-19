@@ -3,8 +3,13 @@ package de.hsesslingen.stundenplan.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import de.hsesslingen.stundenplan.BuildConfig
 import de.hsesslingen.stundenplan.data.CalendarExporter
+import de.hsesslingen.stundenplan.data.LectureReminderWorker
+import de.hsesslingen.stundenplan.data.NotificationHelper
 import de.hsesslingen.stundenplan.data.QisRepository
 import de.hsesslingen.stundenplan.data.SettingsStore
 import de.hsesslingen.stundenplan.data.Studiengang
@@ -21,6 +26,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.concurrent.TimeUnit
 
 data class PlanUiState(
     val studiengang: Studiengang? = null,
@@ -75,6 +81,10 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     val hiddenGroupKeys: StateFlow<Set<String>> =
         settingsStore.hiddenEventKeys.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
+    /** Whether lecture-start reminders are turned on — see [LectureReminderWorker]. */
+    val remindersEnabled: StateFlow<Boolean> =
+        settingsStore.remindersEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     // Live per-week results — QIS shows real per-week data (empty outside term dates, room
     // changes, cancellations), not a recurring template, so each visited week gets its own fetch.
     private val weekCache = mutableMapOf<LocalDate, List<TimetableEvent>>()
@@ -88,6 +98,12 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
         checkForUpdate()
+        // Re-assert the periodic work's enqueued/cancelled state on every process start —
+        // enqueueUniquePeriodicWork with KEEP is a no-op if it's already scheduled (it survives
+        // process death/app restarts on its own via WorkManager's own persisted DB), so this only
+        // actually does something the first time, or if it was somehow lost (e.g. app data cleared
+        // without going through the toggle).
+        viewModelScope.launch { updateReminderWork(settingsStore.remindersEnabled.first()) }
     }
 
     /**
@@ -245,6 +261,30 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     fun setGroupHidden(groupKey: String, hidden: Boolean) {
         viewModelScope.launch { settingsStore.setHidden(groupKey, hidden) }
+    }
+
+    /** Turns lecture-start reminders on/off. The caller (SettingsScreen) is responsible for
+     *  requesting the POST_NOTIFICATIONS runtime permission first on API 33+ — this only persists
+     *  the preference and (de)schedules the worker; NotificationHelper silently no-ops each
+     *  individual notification if the permission isn't actually granted. */
+    fun setRemindersEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsStore.setRemindersEnabled(enabled)
+            updateReminderWork(enabled)
+        }
+    }
+
+    private fun updateReminderWork(enabled: Boolean) {
+        val workManager = WorkManager.getInstance(getApplication())
+        if (enabled) {
+            NotificationHelper.ensureChannel(getApplication())
+            val request = PeriodicWorkRequestBuilder<LectureReminderWorker>(
+                LectureReminderWorker.WORK_INTERVAL_MINUTES, TimeUnit.MINUTES,
+            ).build()
+            workManager.enqueueUniquePeriodicWork(LectureReminderWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+        } else {
+            workManager.cancelUniqueWork(LectureReminderWorker.WORK_NAME)
+        }
     }
 
     companion object {
