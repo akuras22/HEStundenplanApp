@@ -1,6 +1,3 @@
-- **Untere Leiste jetzt wirklich wie bei Samsung**: Statt weiter nach Augenmaß nachzubauen, wurden die Maße und Farben diesmal Pixel für Pixel aus einer Bildschirmaufnahme von Samsung Wallet ausgemessen. Dabei kam heraus, dass mehrere bisherige Annahmen schlicht falsch waren:
-  - Der aktive Tab ist bei Samsung **grau**, nicht farbig — die blaue Hervorhebung der letzten Version gab es dort nie.
-  - Die Symbole wechseln zwischen **ausgefüllt** (aktiv) und **nur umrandet** (inaktiv). Genau das macht bei Samsung den Unterschied aus, zusammen mit der fetteren Schrift — nicht die Farbe.
-  - Beide Bereiche sind **exakt gleich breit**, unabhängig davon wie lang die Beschriftung ist.
-  - Der Wechsel passiert **sofort**, ganz ohne Animation.
-- Größen, Abstände, Eckenrundung und Farbtöne stimmen jetzt auf ein Zehntel Millimeter genau mit Samsungs eigener Leiste überein.
+- **Untere Leiste in der richtigen Größe**: Sie war rund 6,5 % zu groß, weil bei der letzten Messung von einer falschen Bildschirmdichte des Geräts ausgegangen wurde. Diesmal wurden App und Samsung Wallet in Screenshots vom selben Gerät direkt in Pixeln verglichen — dadurch entfällt die Umrechnung als Fehlerquelle komplett. Höhe, Breite, Innenabstände und Eckenrundung stimmen jetzt auf ein Zehntel Millimeter.
+- **Auswahlflächen überlappen sich jetzt wie bei Samsung**: Die beiden Bereiche sind bei Samsung absichtlich etwas breiter als die Hälfte und überlappen sich in der Mitte. Sichtbar wird das nur, wenn man beide gleichzeitig drückt — genau daran ließ es sich nachmessen.
+- **Auswahl kann nicht mehr aus der Leiste herausragen**: Die Höhe der Auswahlfläche ist jetzt fest vorgegeben, statt sich aus der Schriftgröße zu ergeben. Dadurch stand sie vorher je nach Schrift oben und unten über den Rand der Leiste hinaus.

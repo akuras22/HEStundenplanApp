@@ -2,6 +2,12 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.17
+
+- **Untere Leiste in der richtigen Größe**: Sie war rund 6,5 % zu groß, weil bei der letzten Messung von einer falschen Bildschirmdichte des Geräts ausgegangen wurde. Diesmal wurden App und Samsung Wallet in Screenshots vom selben Gerät direkt in Pixeln verglichen — dadurch entfällt die Umrechnung als Fehlerquelle komplett. Höhe, Breite, Innenabstände und Eckenrundung stimmen jetzt auf ein Zehntel Millimeter.
+- **Auswahlflächen überlappen sich jetzt wie bei Samsung**: Die beiden Bereiche sind bei Samsung absichtlich etwas breiter als die Hälfte und überlappen sich in der Mitte. Sichtbar wird das nur, wenn man beide gleichzeitig drückt — genau daran ließ es sich nachmessen.
+- **Auswahl kann nicht mehr aus der Leiste herausragen**: Die Höhe der Auswahlfläche ist jetzt fest vorgegeben, statt sich aus der Schriftgröße zu ergeben. Dadurch stand sie vorher je nach Schrift oben und unten über den Rand der Leiste hinaus.
+
 ## Version 1.0.16
 
 - **Untere Leiste jetzt wirklich wie bei Samsung**: Statt weiter nach Augenmaß nachzubauen, wurden die Maße und Farben diesmal Pixel für Pixel aus einer Bildschirmaufnahme von Samsung Wallet ausgemessen. Dabei kam heraus, dass mehrere bisherige Annahmen schlicht falsch waren:

@@ -505,20 +505,25 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     }
 }
 
-// One UI bottom navigation bar, measured pixel-by-pixel from a screen recording of Samsung Wallet's
-// own bar (1080px capture of a 1440px / 3.5x-density device, so 1dp = 2.625px) and cross-checked
-// against Samsung Gallery's bar at full 1440px. What the measurements actually showed — several
-// points contradict how this was guessed from screenshots before:
-//   track     264 x 64dp stadium, #252427 over black, 4.5dp inner padding
-//   segments  EQUAL FIXED WIDTH (128dp each), not wrap-content: "Schnellzugriff" and "Alle"
-//             measure byte-identical at 132.6dp despite wildly different label lengths
-//   selected  stadium filling its whole segment, #3B3A3D — a neutral gray, NOT an accent color
+// One UI bottom navigation bar, measured against Samsung Wallet's own bar in a screenshot taken on
+// the same device as this app (so both are directly comparable in raw pixels, no density guessing:
+// the app's own known-dp render gives 3.748px/dp, which is what these dp values are derived with).
+//   track     247.6 x 59.8dp stadium, #252528, 4.3dp inner padding
+//   segments  EQUAL FIXED SIZE, not wrap-content: "Schnellzugriff" and "Alle" measure identically
+//             despite wildly different label lengths. They are 123.8dp wide inside a 239.1dp
+//             interior, i.e. they deliberately OVERLAP each other by 8.5dp — normally invisible
+//             since only one is filled, but pressing both at once renders the shared strip
+//             brighter (two translucent overlays stacking), which is how this was confirmed.
+//   selected  stadium filling its segment, #3B3B3E — a neutral gray, NOT an accent color
 //   icons     FILLED when selected, OUTLINED when not; together with the bold label this is what
 //             actually reads as "selected", since both labels are near-white (#FCFBFE vs #E8E7EA)
-//   labels    12sp, bold when selected, regular otherwise
+//   labels    11sp, bold when selected, regular otherwise
 //   switching INSTANT — 60fps frames show zero intermediate states, so no crossfade and no slide
-private val OneUiNavTrackDark = Color(0xFF252427)
-private val OneUiNavSelectedDark = Color(0xFF3B3A3D)
+// The segment height is pinned rather than derived from padding + font metrics: letting the text
+// line box drive it is what previously made the selected pill grow taller than the track and poke
+// out of it at the top and bottom.
+private val OneUiNavTrackDark = Color(0xFF252528)
+private val OneUiNavSelectedDark = Color(0xFF3B3B3E)
 private val OneUiNavSelectedContentDark = Color(0xFFFCFBFE)
 private val OneUiNavUnselectedContentDark = Color(0xFFE8E7EA)
 // Light-mode counterparts (Samsung inverts the relationship: the selected segment becomes the
@@ -528,8 +533,10 @@ private val OneUiNavSelectedLight = Color(0xFFFCFCFD)
 private val OneUiNavSelectedContentLight = Color(0xFF17171A)
 private val OneUiNavUnselectedContentLight = Color(0xFF48484B)
 
-private val OneUiNavSegmentWidth = 128.dp
-private val OneUiNavTrackPadding = 4.5.dp
+private val OneUiNavSegmentWidth = 123.8.dp
+private val OneUiNavSegmentHeight = 51.2.dp
+private val OneUiNavSegmentOverlap = 8.5.dp
+private val OneUiNavTrackPadding = 4.3.dp
 
 /** Floating view-mode switcher (Woche/Tag) — see the measurements above for where every value comes from. */
 @Composable
@@ -545,6 +552,7 @@ private fun BottomNavPill(
             .clip(PillShape)
             .background(if (dark) OneUiNavTrackDark else OneUiNavTrackLight)
             .padding(OneUiNavTrackPadding),
+        horizontalArrangement = Arrangement.spacedBy(-OneUiNavSegmentOverlap),
     ) {
         BottomNavItem(
             selectedIcon = Icons.Filled.ViewWeek,
@@ -582,15 +590,12 @@ private fun BottomNavItem(
     }
     Column(
         Modifier
-            .width(OneUiNavSegmentWidth)
+            .size(OneUiNavSegmentWidth, OneUiNavSegmentHeight)
             .clip(PillShape)
             .background(bg)
-            .clickable(onClick = onClick)
-            // 6.5 + 24(icon) + 3.5(gap) + 14(label line box) + 6.5 = 54.5dp, matching the
-            // reference's measured 54.5dp segment height exactly.
-            .padding(vertical = 6.5.dp),
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.5.dp),
+        verticalArrangement = Arrangement.spacedBy(2.5.dp, Alignment.CenterVertically),
     ) {
         Icon(
             if (selected) selectedIcon else unselectedIcon,
@@ -600,10 +605,11 @@ private fun BottomNavItem(
         )
         Text(
             label,
-            fontSize = 12.sp,
-            lineHeight = 14.sp,
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
             color = fg,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1,
         )
     }
 }
