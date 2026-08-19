@@ -148,6 +148,13 @@ fun NotificationsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                             }
                         }
                     }
+
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    TextButton(onClick = { viewModel.sendTestNotification() }) {
+                        Icon(Icons.Filled.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Test-Benachrichtigung senden")
+                    }
                 }
             }
         }

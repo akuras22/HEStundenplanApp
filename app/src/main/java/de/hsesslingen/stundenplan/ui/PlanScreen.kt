@@ -1,5 +1,6 @@
 package de.hsesslingen.stundenplan.ui
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
@@ -45,7 +46,9 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material.icons.filled.ViewWeek
@@ -60,13 +63,16 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -75,6 +81,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +94,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
@@ -128,6 +136,17 @@ import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
 private enum class PlanViewMode { WEEK, DAY }
+
+/** Which fields render on each event block (Woche/Tag) — configurable in Einstellungen ▸
+ *  Darstellung. Threaded via CompositionLocal rather than a parameter on every card-drawing
+ *  composable in the WeekGrid/DayTimeline call chain, same pattern as [LocalIsDarkTheme]. */
+private data class BlockDisplayOptions(
+    val showTime: Boolean = true,
+    val showRoom: Boolean = true,
+    val showLecturer: Boolean = false,
+)
+
+private val LocalBlockDisplayOptions = staticCompositionLocalOf { BlockDisplayOptions() }
 
 private val eventPalette = listOf(
     Color(0xFF4DA3FF), Color(0xFF5FD68A), Color(0xFFFF8A5B),
@@ -316,8 +335,24 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     var selectedEvent by remember { mutableStateOf<TimetableEvent?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showFavoritesMenu by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
     val headerHaze = rememberHazeState()
     val haptics = LocalHapticFeedback.current
+    val blockShowTime by viewModel.blockShowTime.collectAsState()
+    val blockShowRoom by viewModel.blockShowRoom.collectAsState()
+    val blockShowLecturer by viewModel.blockShowLecturer.collectAsState()
+    val blockOptions = BlockDisplayOptions(showTime = blockShowTime, showRoom = blockShowRoom, showLecturer = blockShowLecturer)
+    val pendingOpenDate by viewModel.pendingOpenDate.collectAsState()
+
+    // A reminder notification (or "Test-Benachrichtigung senden") tap jumps straight to that
+    // day's Tag-Ansicht — cleared right after so it doesn't keep re-triggering on recomposition.
+    LaunchedEffect(pendingOpenDate) {
+        pendingOpenDate?.let { date ->
+            selectedDate = date
+            viewMode = PlanViewMode.DAY
+            viewModel.clearPendingOpenDate()
+        }
+    }
 
     // The site serves real per-week data (empty outside term dates, room changes, cancellations),
     // not a recurring template, so every week the user swipes to needs its own live fetch.
@@ -331,6 +366,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
         state.events.filterNot { it.groupKey in hiddenGroupKeys }
     }
 
+    CompositionLocalProvider(LocalBlockDisplayOptions provides blockOptions) {
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             AmbientBackdrop(Modifier.hazeSource(state = headerHaze))
@@ -422,6 +458,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         // to do just invites a confusing no-op tap, so only Einstellungen (the one
                         // way to actually fix that) shows until a Studiengang is selected.
                         if (state.studiengang != null) {
+                            GlassIconButton(Icons.Filled.Search, "Suchen") { showSearch = true }
                             GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
                             GlassIconButton(Icons.Filled.EditCalendar, "Datum wählen") { showDatePicker = true }
                             GlassIconButton(Icons.Filled.Refresh, "Aktualisieren") { viewModel.refresh() }
@@ -534,6 +571,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
             )
         }
     }
+    }
 
     selectedEvent?.let { event ->
         EventDetailDialog(
@@ -541,6 +579,18 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
             hidden = event.groupKey in hiddenGroupKeys,
             onToggleHidden = { hidden -> viewModel.setGroupHidden(event.groupKey, hidden) },
             onDismiss = { selectedEvent = null },
+        )
+    }
+
+    if (showSearch) {
+        TimetableSearchDialog(
+            events = visibleEvents,
+            courseCode = state.studiengang?.code,
+            onSelect = { event ->
+                selectedEvent = event
+                showSearch = false
+            },
+            onDismiss = { showSearch = false },
         )
     }
 
@@ -1002,6 +1052,7 @@ private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCod
 @Composable
 private fun DayTimelineCard(event: TimetableEvent, courseCode: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = colorFor(event.title)
+    val blockOptions = LocalBlockDisplayOptions.current
     Column(
         modifier
             .clip(MaterialTheme.shapes.medium)
@@ -1009,24 +1060,37 @@ private fun DayTimelineCard(event: TimetableEvent, courseCode: String?, onClick:
             .clickable(onClick = onClick)
             .padding(10.dp),
     ) {
-        Text(
-            "${event.startLabel} – ${event.endLabel}",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-        )
+        if (blockOptions.showTime) {
+            Text(
+                "${event.startLabel} – ${event.endLabel}",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+        }
         Text(
             event.shortTitle(courseCode),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = Color.White,
         )
-        event.shortRoom()?.let { room ->
-            Text(
-                room,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.85f),
-            )
+        if (blockOptions.showRoom) {
+            event.shortRoom()?.let { room ->
+                Text(
+                    room,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+            }
+        }
+        if (blockOptions.showLecturer) {
+            event.lecturer?.takeIf { it.isNotBlank() }?.let { lecturer ->
+                Text(
+                    lecturer,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+            }
         }
     }
 }
@@ -1338,6 +1402,7 @@ private fun DayColumn(
     columnWidth: Dp,
     onEventClick: (TimetableEvent) -> Unit,
 ) {
+    val blockOptions = LocalBlockDisplayOptions.current
     Box(Modifier.width(columnWidth).height(totalHeight)) {
         if (date == LocalDate.now()) {
             val now = LocalTime.now()
@@ -1392,6 +1457,18 @@ private fun DayColumn(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(1.dp),
                 ) {
+                    // Time/lecturer only fit in non-cramped (1- or 2-wide) slots, same reasoning
+                    // as the existing room line below — a tap still shows everything either way.
+                    if (blockOptions.showTime && slot.columnCount <= 2) {
+                        Text(
+                            "${event.startLabel}–${event.endLabel}",
+                            style = WeekCardRoomStyle.copy(fontSize = roomFontSize, lineHeight = (roomFontSize.value * 1.15f).sp),
+                            textAlign = TextAlign.Center,
+                            color = Color.White.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     Text(
                         event.shortTitle(courseCode),
                         style = WeekCardTitleStyle.copy(fontSize = slotTitleFontSize, lineHeight = (slotTitleFontSize.value * 1.15f).sp),
@@ -1400,12 +1477,24 @@ private fun DayColumn(
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    // Skip the room line in tight (3+) overlaps — there's no space left for it to
-                    // add anything readable; a tap still shows it in the detail dialog.
-                    if (slot.columnCount <= 2) {
+                    // Skip the room/lecturer lines in tight (3+) overlaps — there's no space left
+                    // for them to add anything readable; a tap still shows it in the detail dialog.
+                    if (blockOptions.showRoom && slot.columnCount <= 2) {
                         event.shortRoom()?.let { room ->
                             Text(
                                 room,
+                                style = WeekCardRoomStyle.copy(fontSize = roomFontSize, lineHeight = (roomFontSize.value * 1.15f).sp),
+                                textAlign = TextAlign.Center,
+                                color = Color.White.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    if (blockOptions.showLecturer && slot.columnCount <= 2) {
+                        event.lecturer?.takeIf { it.isNotBlank() }?.let { lecturer ->
+                            Text(
+                                lecturer,
                                 style = WeekCardRoomStyle.copy(fontSize = roomFontSize, lineHeight = (roomFontSize.value * 1.15f).sp),
                                 textAlign = TextAlign.Center,
                                 color = Color.White.copy(alpha = 0.85f),
@@ -1422,6 +1511,7 @@ private fun DayColumn(
 
 @Composable
 private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHidden: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
     // Samsung's own dialogs (e.g. Gallery "Details") use a plain near-black card, a bold
     // left-aligned title with no colored banner, and simple stacked label/value rows.
     OneUiAlertDialog(
@@ -1435,7 +1525,19 @@ private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHi
                 Text(if (hidden) "Wieder einblenden" else "Ausblenden")
             }
         },
-        title = { Text(event.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    event.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { shareEvent(context, event) }) {
+                    Icon(Icons.Filled.Share, contentDescription = "Veranstaltung teilen")
+                }
+            }
+        },
         text = {
             Column {
                 Text(
@@ -1453,6 +1555,111 @@ private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHi
             }
         },
     )
+}
+
+/** Search across the currently loaded week's events by room or lecturer — deliberately scoped to
+ *  "this week" (not the whole semester), since that's the only data actually held in memory; a
+ *  wider search would mean fetching every week live just to search it. */
+@Composable
+private fun TimetableSearchDialog(
+    events: List<TimetableEvent>,
+    courseCode: String?,
+    onSelect: (TimetableEvent) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val results = remember(events, query) {
+        if (query.isBlank()) {
+            emptyList()
+        } else {
+            events
+                .filter { event ->
+                    event.room?.contains(query, ignoreCase = true) == true ||
+                        event.lecturer?.contains(query, ignoreCase = true) == true
+                }
+                .sortedWith(compareBy({ it.day.ordinal }, { it.startMinutes }))
+        }
+    }
+
+    OneUiAlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen") } },
+        title = { Text("Suchen", fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text(
+                    "Nach Raum oder Dozent in dieser Woche",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("z. B. F 01.016 oder Gänswein") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(12.dp))
+                Column(
+                    Modifier
+                        .heightIn(max = 320.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (query.isNotBlank() && results.isEmpty()) {
+                        Text(
+                            "Keine Treffer in dieser Woche",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    results.forEach { event ->
+                        SearchResultRow(event = event, courseCode = courseCode, onClick = { onSelect(event) })
+                    }
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun SearchResultRow(event: TimetableEvent, courseCode: String?, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(event.shortTitle(courseCode), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "${event.day.germanLabel}, ${event.startLabel}–${event.endLabel}" + (event.shortRoom()?.let { " · $it" } ?: ""),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** "Veranstaltung teilen" in the detail dialog — a plain-text share, not a calendar file, so no
+ *  FileProvider/importer round-trip is needed for something this small. */
+private fun shareEvent(context: android.content.Context, event: TimetableEvent) {
+    val text = buildString {
+        append(event.title)
+        append("\n")
+        append("${event.day.germanLabel}, ${event.startLabel} – ${event.endLabel}")
+        event.room?.let { append("\nRaum: $it") }
+        event.lecturer?.let { append("\nDozent: $it") }
+    }
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(sendIntent, null))
 }
 
 private val MARKDOWN_BOLD_RE = Regex("""\*\*(.+?)\*\*""")

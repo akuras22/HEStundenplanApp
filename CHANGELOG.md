@@ -2,6 +2,17 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.8.0
+
+- **Blockinhalt einstellbar**: Uhrzeit, Raum und Dozent auf den Veranstaltungsblöcken einzeln ein-/ausblendbar (Einstellungen ▸ Darstellung).
+- **Trenner zwischen den Darstellungsoptionen**, für mehr Übersicht.
+- **Kalender-Export entfernt** (das Teilen des Stundenplans als .ics-Datei).
+- **Benachrichtigung führt jetzt direkt zum Termin**, statt nur die App zu öffnen.
+- **Test-Benachrichtigung senden**-Button in den Benachrichtigungseinstellungen.
+- **Einzelne Veranstaltung teilen** aus dem Detail-Popup heraus.
+- **Größeres Widget zeigt mehrere Termine**, wenn genug Platz auf dem Homescreen ist.
+- **Suche nach Raum oder Dozent** im Stundenplan.
+
 ## Version 1.7.1
 
 - **Hinweis zum Update-Download ergänzt**: Wenn der Download in Chrome bei 100% hängen bleibt, ist das Chromes eigene Sicherheitsprüfung der Datei — kein fehlgeschlagener Download. Das läuft komplett außerhalb der App und kann von hier aus nicht beschleunigt werden.

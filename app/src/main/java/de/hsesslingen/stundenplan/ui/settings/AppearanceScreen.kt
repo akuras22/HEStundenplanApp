@@ -52,6 +52,9 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     val customBackgroundColor by viewModel.customBackgroundColor.collectAsState()
     val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
     val defaultViewIsDay by viewModel.defaultViewIsDay.collectAsState()
+    val blockShowTime by viewModel.blockShowTime.collectAsState()
+    val blockShowRoom by viewModel.blockShowRoom.collectAsState()
+    val blockShowLecturer by viewModel.blockShowLecturer.collectAsState()
     var showAccentPicker by remember { mutableStateOf(false) }
     var showBackgroundPicker by remember { mutableStateOf(false) }
 
@@ -69,7 +72,7 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 onCheckedChange = { viewModel.setDefaultViewIsDay(it) },
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            SectionDivider()
 
             SectionLabel("Design")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -77,6 +80,8 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 ThemeModeChip("Hell", ThemeMode.LIGHT, themeMode) { viewModel.setThemeMode(it) }
                 ThemeModeChip("Dunkel", ThemeMode.DARK, themeMode) { viewModel.setThemeMode(it) }
             }
+
+            SectionDivider()
 
             Column {
                 SectionLabel("Akzentfarbe")
@@ -99,6 +104,8 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 }
             }
 
+            SectionDivider()
+
             Column {
                 SectionLabel("Hintergrundfarbe")
                 Spacer(Modifier.height(8.dp))
@@ -109,6 +116,38 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 )
             }
 
+            SectionDivider()
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionLabel("Blockinhalt")
+                Text(
+                    "Was auf den Veranstaltungsblöcken in Woche/Tag angezeigt wird",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(2.dp))
+                SettingsToggleRow(
+                    title = "Uhrzeit",
+                    subtitle = "Start- und Endzeit auf dem Block",
+                    checked = blockShowTime,
+                    onCheckedChange = { viewModel.setBlockShowTime(it) },
+                )
+                SettingsToggleRow(
+                    title = "Raum",
+                    subtitle = "Raumnummer auf dem Block",
+                    checked = blockShowRoom,
+                    onCheckedChange = { viewModel.setBlockShowRoom(it) },
+                )
+                SettingsToggleRow(
+                    title = "Dozent",
+                    subtitle = "Name des Dozenten auf dem Block",
+                    checked = blockShowLecturer,
+                    onCheckedChange = { viewModel.setBlockShowLecturer(it) },
+                )
+            }
+
+            SectionDivider()
+
             TextButton(onClick = { viewModel.resetAppearance() }) {
                 Icon(Icons.Filled.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
@@ -116,6 +155,7 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
             }
 
             if (hiddenGroupKeys.isNotEmpty()) {
+                SectionDivider()
                 HiddenGroupsSection(
                     hiddenGroupKeys = hiddenGroupKeys,
                     onUnhide = { key -> viewModel.setGroupHidden(key, false) },
@@ -146,6 +186,11 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
             onDismiss = { showBackgroundPicker = false },
         )
     }
+}
+
+@Composable
+private fun SectionDivider() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable

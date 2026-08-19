@@ -69,6 +69,9 @@ class SettingsStore(private val context: Context) {
         val CUSTOM_ACCENT_ARGB = intPreferencesKey("custom_accent_argb")
         val CUSTOM_BACKGROUND_ARGB = intPreferencesKey("custom_background_argb")
         val DEFAULT_VIEW_IS_DAY = booleanPreferencesKey("default_view_is_day")
+        val BLOCK_SHOW_TIME = booleanPreferencesKey("block_show_time")
+        val BLOCK_SHOW_ROOM = booleanPreferencesKey("block_show_room")
+        val BLOCK_SHOW_LECTURER = booleanPreferencesKey("block_show_lecturer")
     }
 
     val selectedStudiengang: Flow<Studiengang?> = context.dataStore.data.map { prefs ->
@@ -213,8 +216,28 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[Keys.DEFAULT_VIEW_IS_DAY] = isDay }
     }
 
+    /** What shows on each event block in Woche/Tag — separate from the full detail dialog, which
+     *  always shows everything regardless of these. Room+time are on by default (matching the
+     *  original fixed layout); lecturer is off by default since it doesn't fit most blocks cleanly. */
+    val blockShowTime: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[Keys.BLOCK_SHOW_TIME] ?: true }
+    val blockShowRoom: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[Keys.BLOCK_SHOW_ROOM] ?: true }
+    val blockShowLecturer: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[Keys.BLOCK_SHOW_LECTURER] ?: false }
+
+    suspend fun setBlockShowTime(show: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.BLOCK_SHOW_TIME] = show }
+    }
+
+    suspend fun setBlockShowRoom(show: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.BLOCK_SHOW_ROOM] = show }
+    }
+
+    suspend fun setBlockShowLecturer(show: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.BLOCK_SHOW_LECTURER] = show }
+    }
+
     /** "Zurücksetzen" in Darstellung — puts every appearance-related setting back to the app's
-     *  defaults (System theme, no dynamic color, default One UI accent, no custom colors). */
+     *  defaults (System theme, no dynamic color, default One UI accent, no custom colors, default
+     *  block content). */
     suspend fun resetAppearance() {
         context.dataStore.edit { prefs ->
             prefs[Keys.THEME_MODE] = ThemeMode.SYSTEM.name
@@ -222,6 +245,9 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.ACCENT_PRESET] = AccentPreset.DEFAULT.name
             prefs.remove(Keys.CUSTOM_ACCENT_ARGB)
             prefs.remove(Keys.CUSTOM_BACKGROUND_ARGB)
+            prefs[Keys.BLOCK_SHOW_TIME] = true
+            prefs[Keys.BLOCK_SHOW_ROOM] = true
+            prefs[Keys.BLOCK_SHOW_LECTURER] = false
         }
     }
 }

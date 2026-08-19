@@ -1,1 +1,8 @@
-- **Hinweis ergänzt**: Hängt der Download in Chrome bei 100%, ist das Chromes eigene Sicherheitsprüfung — kein fehlgeschlagener Download.
+- **Blockinhalt einstellbar**: Uhrzeit/Raum/Dozent auf den Blöcken einzeln ein-/ausblendbar.
+- **Trenner zwischen den Darstellungsoptionen**.
+- **Kalender-Export entfernt**.
+- **Benachrichtigung führt jetzt direkt zum Termin**.
+- **Test-Benachrichtigung senden**-Button.
+- **Einzelne Veranstaltung teilen**.
+- **Größeres Widget mit mehreren Terminen**.
+- **Suche nach Raum oder Dozent**.

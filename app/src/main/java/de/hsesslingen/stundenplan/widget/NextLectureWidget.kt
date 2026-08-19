@@ -5,16 +5,22 @@ import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -25,10 +31,16 @@ import de.hsesslingen.stundenplan.data.NextEventResult
 import de.hsesslingen.stundenplan.data.SettingsStore
 import de.hsesslingen.stundenplan.data.ThemeMode
 import de.hsesslingen.stundenplan.data.TimetableCache
-import de.hsesslingen.stundenplan.data.findNextEvent
+import de.hsesslingen.stundenplan.data.findUpcomingEvents
 import kotlinx.coroutines.flow.first
 import java.time.DayOfWeek
 import java.time.LocalDateTime
+
+// The two sizes a placed widget is rounded to for layout purposes (see GlanceAppWidget.sizeMode
+// below) — small keeps today's original single-event card, large (roughly a 4x2+ placement) has
+// room to list the next few events instead of just one.
+private val SMALL_WIDGET_SIZE = DpSize(180.dp, 90.dp)
+private val LARGE_WIDGET_SIZE = DpSize(250.dp, 180.dp)
 
 /** The widget's own resolved palette — mirrors StundenplanTheme's accent/background logic (see
  *  ui/theme/Theme.kt) so the widget doesn't look out of place next to a customized in-app theme.
@@ -64,6 +76,8 @@ private suspend fun resolvePalette(context: Context, settingsStore: SettingsStor
  * this widget is explicitly refreshed right after (see WidgetUpdater).
  */
 class NextLectureWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Responsive(setOf(SMALL_WIDGET_SIZE, LARGE_WIDGET_SIZE))
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val settingsStore = SettingsStore(context)
         val palette = resolvePalette(context, settingsStore)
@@ -81,13 +95,15 @@ class NextLectureWidget : GlanceAppWidget() {
         val nextMonday = thisMonday.plusWeeks(1)
         val events = (cache.get(studiengang, thisMonday)?.events ?: emptyList()) +
             (cache.get(studiengang, nextMonday)?.events ?: emptyList())
-        val next = findNextEvent(events, now, hiddenKeys)
+        val upcoming = findUpcomingEvents(events, now, hiddenKeys, count = 3)
 
         provideContent {
+            val isLarge = LocalSize.current.height >= LARGE_WIDGET_SIZE.height
             when {
-                next != null -> WidgetNextEvent(studiengang.code, next, palette)
-                events.isEmpty() -> WidgetMessage("Noch keine Daten – App öffnen", palette)
-                else -> WidgetMessage("Keine weiteren Veranstaltungen", palette)
+                upcoming.isEmpty() && events.isEmpty() -> WidgetMessage("Noch keine Daten – App öffnen", palette)
+                upcoming.isEmpty() -> WidgetMessage("Keine weiteren Veranstaltungen", palette)
+                isLarge -> WidgetUpcomingEvents(studiengang.code, upcoming, palette)
+                else -> WidgetNextEvent(studiengang.code, upcoming.first(), palette)
             }
         }
     }
@@ -103,6 +119,49 @@ private fun WidgetMessage(text: String, palette: WidgetPalette) {
         Text(
             text,
             style = TextStyle(fontSize = 13.sp, color = ColorProvider(palette.onSurfaceVariant)),
+        )
+    }
+}
+
+/** Large-size layout — lists the next few events instead of just one, since there's room for it. */
+@Composable
+private fun WidgetUpcomingEvents(courseCode: String, upcoming: List<NextEventResult>, palette: WidgetPalette) {
+    Column(
+        modifier = GlanceModifier.fillMaxSize().background(palette.background).padding(12.dp),
+    ) {
+        Text(
+            courseCode,
+            style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ColorProvider(palette.accent)),
+        )
+        Spacer(GlanceModifier.height(6.dp))
+        upcoming.forEachIndexed { index, result ->
+            if (index > 0) Spacer(GlanceModifier.height(8.dp))
+            WidgetUpcomingEventRow(result, palette)
+        }
+    }
+}
+
+@Composable
+private fun WidgetUpcomingEventRow(result: NextEventResult, palette: WidgetPalette) {
+    val event = result.event
+    val room = event.room?.substringAfterLast(" - ")?.trim()
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Text(
+            event.title,
+            maxLines = 1,
+            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorProvider(palette.onBackground)),
+        )
+        Text(
+            buildString {
+                append(event.day.germanLabel)
+                append(", ")
+                append(event.startLabel)
+                append(" – ")
+                append(event.endLabel)
+                if (!room.isNullOrBlank()) { append(" · "); append(room) }
+            },
+            maxLines = 1,
+            style = TextStyle(fontSize = 11.sp, color = ColorProvider(palette.onSurfaceVariant)),
         )
     }
 }

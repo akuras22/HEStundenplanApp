@@ -9,7 +9,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import de.hsesslingen.stundenplan.BuildConfig
 import de.hsesslingen.stundenplan.data.AccentPreset
-import de.hsesslingen.stundenplan.data.CalendarExporter
 import de.hsesslingen.stundenplan.data.LectureReminderWorker
 import de.hsesslingen.stundenplan.data.NotificationHelper
 import de.hsesslingen.stundenplan.data.QisRepository
@@ -20,6 +19,7 @@ import de.hsesslingen.stundenplan.data.TimetableCache
 import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.UpdateManager
+import de.hsesslingen.stundenplan.data.Weekday
 import de.hsesslingen.stundenplan.data.friendlyNetworkErrorMessage
 import de.hsesslingen.stundenplan.widget.WidgetUpdater
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
 data class PlanUiState(
@@ -67,7 +68,6 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     private val settingsStore = SettingsStore(application)
     private val updateManager = UpdateManager(application)
     private val timetableCache = TimetableCache(application)
-    private val calendarExporter = CalendarExporter(application)
 
     private val _planState = MutableStateFlow(PlanUiState())
     val planState: StateFlow<PlanUiState> = _planState.asStateFlow()
@@ -86,6 +86,20 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     fun postFeedback(message: String) {
         viewModelScope.launch { _feedback.emit(message) }
+    }
+
+    /** Set from a reminder notification tap (or the "Test-Benachrichtigung senden" button) via
+     *  MainActivity.onCreate/onNewIntent — PlanScreen jumps to this date in Tag-Ansicht once, then
+     *  clears it, so it doesn't keep re-triggering on every recomposition/rotation. */
+    private val _pendingOpenDate = MutableStateFlow<LocalDate?>(null)
+    val pendingOpenDate: StateFlow<LocalDate?> = _pendingOpenDate.asStateFlow()
+
+    fun requestOpenDate(date: LocalDate) {
+        _pendingOpenDate.value = date
+    }
+
+    fun clearPendingOpenDate() {
+        _pendingOpenDate.value = null
     }
 
     /** Studiengänge starred for quick switching (see [SettingsStore.favoriteStudiengaenge]). */
@@ -129,6 +143,26 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     fun setDefaultViewIsDay(isDay: Boolean) {
         viewModelScope.launch { settingsStore.setDefaultViewIsDay(isDay) }
+    }
+
+    /** What shows on each event block in Woche/Tag — see [SettingsStore.blockShowTime] etc. */
+    val blockShowTime: StateFlow<Boolean> =
+        settingsStore.blockShowTime.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    val blockShowRoom: StateFlow<Boolean> =
+        settingsStore.blockShowRoom.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    val blockShowLecturer: StateFlow<Boolean> =
+        settingsStore.blockShowLecturer.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setBlockShowTime(show: Boolean) {
+        viewModelScope.launch { settingsStore.setBlockShowTime(show) }
+    }
+
+    fun setBlockShowRoom(show: Boolean) {
+        viewModelScope.launch { settingsStore.setBlockShowRoom(show) }
+    }
+
+    fun setBlockShowLecturer(show: Boolean) {
+        viewModelScope.launch { settingsStore.setBlockShowLecturer(show) }
     }
 
     // Live per-week results — QIS shows real per-week data (empty outside term dates, room
@@ -277,15 +311,6 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         loadWeek(monday)
     }
 
-    /** Shares the currently loaded week's events as an .ics file — see [buildIcs] for why one
-     *  week's fetch is enough to cover the whole semester. No-op if nothing has loaded yet. */
-    fun exportIcs() {
-        val state = _planState.value
-        val studiengang = state.studiengang ?: return
-        if (state.events.isEmpty()) return
-        calendarExporter.shareAsIcs(state.events, studiengang.code)
-    }
-
     fun loadStudiengangList(forceReload: Boolean = false) {
         if (_pickerState.value.all.isNotEmpty() && !forceReload) return
         viewModelScope.launch {
@@ -358,6 +383,28 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch { settingsStore.setReminderLeadMinutes(minutes) }
     }
 
+    /** "Test-Benachrichtigung senden" in Einstellungen ▸ Benachrichtigungen — fires an immediate
+     *  sample notification so the user can confirm permissions/channel actually work, without
+     *  waiting for a real lecture to come up. Tapping it deep-links to today, same as a real one. */
+    fun sendTestNotification() {
+        NotificationHelper.ensureChannel(getApplication())
+        val now = LocalTime.now()
+        val today = LocalDate.now()
+        val testEvent = TimetableEvent(
+            day = Weekday.fromDate(today) ?: Weekday.MONDAY,
+            title = "Test-Benachrichtigung",
+            startMinutes = now.hour * 60 + now.minute,
+            endMinutes = now.hour * 60 + now.minute + 45,
+            frequency = null,
+            room = null,
+            lecturer = null,
+            category = null,
+            startDate = null,
+            endDate = null,
+        )
+        NotificationHelper.notifyUpcoming(getApplication(), testEvent, notificationId = TEST_NOTIFICATION_ID, date = today)
+    }
+
     fun setDynamicColorEnabled(enabled: Boolean) {
         viewModelScope.launch { settingsStore.setDynamicColorEnabled(enabled) }
     }
@@ -399,5 +446,6 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     companion object {
         private const val UPDATE_CHECK_MIN_INTERVAL_MS = 60_000L
+        private const val TEST_NOTIFICATION_ID = -1
     }
 }

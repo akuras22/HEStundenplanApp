@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
@@ -74,25 +73,12 @@ fun StudiengangScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     }
 
     SettingsPageScaffold(title = "Studiengänge", onBack = onBack) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Wähle deinen aktuellen Studiengang und markiere weitere als Favoriten.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            // Exports the currently loaded week's events as .ics — covers the whole semester in
-            // one go since QIS reports each event's full recurrence on every week's page, not just
-            // the visited one (see IcsExporter). Only meaningful once a week has actually loaded.
-            if (planState.events.isNotEmpty()) {
-                IconButton(onClick = { viewModel.exportIcs() }) {
-                    Icon(Icons.Filled.CalendarMonth, contentDescription = "Als Kalender exportieren")
-                }
-            }
-        }
+        Text(
+            "Wähle deinen aktuellen Studiengang und markiere weitere als Favoriten.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+        )
 
         OutlinedTextField(
             value = pickerState.query,

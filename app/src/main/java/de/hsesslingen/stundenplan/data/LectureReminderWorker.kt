@@ -50,7 +50,7 @@ class LectureReminderWorker(context: Context, params: WorkerParameters) : Corout
             dayEvents.filter { it.startMinutes in window }.forEach { event ->
                 val dedupKey = "${event.groupKey}@$leadMinutes"
                 if (!settingsStore.hasNotifiedToday(dateKey, dedupKey)) {
-                    NotificationHelper.notifyUpcoming(applicationContext, event, notificationId = dedupKey.hashCode())
+                    NotificationHelper.notifyUpcoming(applicationContext, event, notificationId = dedupKey.hashCode(), date = today)
                     settingsStore.markNotifiedToday(dateKey, dedupKey)
                 }
             }

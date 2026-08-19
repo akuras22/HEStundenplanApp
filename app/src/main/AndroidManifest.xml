@@ -16,6 +16,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:label="@string/app_name"
             android:theme="@style/Theme.Stundenplan">
             <intent-filter>
@@ -35,19 +36,6 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/next_lecture_widget_info" />
         </receiver>
-
-        <!-- Serves generated files (e.g. the .ics calendar export) to whatever app the user shares
-             them to. Not used for installing APKs — see UpdateManager for why that's deliberately
-             routed through the browser instead of a FileProvider + package-installer flow. -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
 
 </manifest>

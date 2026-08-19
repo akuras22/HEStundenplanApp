@@ -1,5 +1,6 @@
 package de.hsesslingen.stundenplan
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import de.hsesslingen.stundenplan.data.EXTRA_OPEN_DATE
 import de.hsesslingen.stundenplan.data.ThemeMode
 import de.hsesslingen.stundenplan.ui.PlanScreen
 import de.hsesslingen.stundenplan.ui.StundenplanViewModel
@@ -34,13 +36,30 @@ import de.hsesslingen.stundenplan.ui.settings.SettingsHubScreen
 import de.hsesslingen.stundenplan.ui.settings.SettingsRoute
 import de.hsesslingen.stundenplan.ui.settings.StudiengangScreen
 import de.hsesslingen.stundenplan.ui.theme.StundenplanTheme
+import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: StundenplanViewModel by viewModels()
 
+    /** Reminder notifications (and the "Test-Benachrichtigung senden" button) launch with
+     *  EXTRA_OPEN_DATE set — MainActivity is singleTask (see AndroidManifest) so a tap while the
+     *  app is already running arrives here via onNewIntent instead of a fresh onCreate. */
+    private fun handleOpenDateIntent(intent: Intent?) {
+        val raw = intent?.getStringExtra(EXTRA_OPEN_DATE) ?: return
+        val date = runCatching { LocalDate.parse(raw) }.getOrNull() ?: return
+        viewModel.requestOpenDate(date)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOpenDateIntent(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleOpenDateIntent(intent)
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
             val dynamicColor by viewModel.dynamicColorEnabled.collectAsState()
@@ -74,6 +93,13 @@ private fun StundenplanApp(viewModel: StundenplanViewModel) {
     var settingsStack by remember { mutableStateOf<List<SettingsRoute>>(emptyList()) }
     val updateState by viewModel.updateState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val pendingOpenDate by viewModel.pendingOpenDate.collectAsState()
+
+    // A reminder notification tap should always land on the Plan screen's Tag-Ansicht, even if
+    // the user was mid-way through Einstellungen when they tapped it.
+    LaunchedEffect(pendingOpenDate) {
+        if (pendingOpenDate != null) settingsStack = emptyList()
+    }
 
     // Action-feedback messages (e.g. "Zwischenspeicher geleert.") surface as a Snackbar here,
     // hoisted above the screen switch so they show no matter which Einstellungen sub-page (or the
