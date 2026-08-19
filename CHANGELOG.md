@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.0.22
+
+- **Homescreen-Widget**: Neues Widget, das die nächste anstehende Veranstaltung anzeigt (Titel, Uhrzeit, Raum), ohne die App öffnen zu müssen. Zum Startbildschirm hinzufügen wie jedes andere Widget auch. Aktualisiert sich automatisch, sobald die App im Hintergrund neue Daten lädt.
+
 ## Version 1.0.21
 
 - **Vorlesungserinnerungen**: Neuer Schalter in den Einstellungen — einmal aktiviert, meldet sich die App etwa 15 Minuten bevor eine Veranstaltung beginnt, inklusive Raum. Ausgeblendete Veranstaltungen (siehe oben) werden dabei übersprungen. Beim ersten Aktivieren fragt Android einmalig nach der Benachrichtigungs-Erlaubnis.

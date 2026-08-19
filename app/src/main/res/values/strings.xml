@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">HEStundenplan</string>
+    <string name="widget_description">Zeigt die nächste anstehende Veranstaltung.</string>
+    <string name="widget_loading">Lädt…</string>
 </resources>

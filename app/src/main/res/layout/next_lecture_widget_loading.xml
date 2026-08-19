@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glance requires a plain RemoteViews-compatible initialLayout for the widget picker preview
+     and the brief moment before the real Compose-driven content (NextLectureWidget) first renders. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF1A1A1A">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:padding="12dp"
+        android:text="@string/widget_loading"
+        android:textColor="#FFFFFFFF" />
+
+</FrameLayout>

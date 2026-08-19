@@ -18,6 +18,7 @@ import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.UpdateManager
 import de.hsesslingen.stundenplan.data.friendlyNetworkErrorMessage
+import de.hsesslingen.stundenplan.widget.WidgetUpdater
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -163,6 +164,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
                 val events = repository.fetchTimetable(studiengang, weekMonday)
                 weekCache[weekMonday] = events
                 timetableCache.put(studiengang, weekMonday, events)
+                WidgetUpdater.refresh(getApplication())
                 if (_planState.value.weekMonday == weekMonday) {
                     _planState.value = _planState.value.copy(
                         events = events, isLoading = false, isOffline = false, offlineSince = null,

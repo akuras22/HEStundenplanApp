@@ -24,6 +24,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Home-screen widget showing the next upcoming lecture (see widget/NextLectureWidget). -->
+        <receiver
+            android:name=".widget.NextLectureWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_lecture_widget_info" />
+        </receiver>
+
         <!-- Serves generated files (e.g. the .ics calendar export) to whatever app the user shares
              them to. Not used for installing APKs — see UpdateManager for why that's deliberately
              routed through the browser instead of a FileProvider + package-installer flow. -->
