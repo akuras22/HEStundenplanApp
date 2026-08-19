@@ -43,6 +43,14 @@ data class TimetableEvent(
     /** Whether this recurring event's weekday matches [date] (the page is a weekly template, not per-date data). */
     fun appliesOn(date: LocalDate): Boolean = day == Weekday.fromDate(date)
 
+    /** Stable identity for "this recurring group" across weeks — e.g. one specific parallel
+     *  Tutorium group — so the user can hide groups they're not actually in (see SettingsStore's
+     *  hiddenEventKeys). Lecturer is the discriminator, not room, since QIS shows real per-week
+     *  data and rooms can change week to week while the lecturer/group generally doesn't; falls
+     *  back to room, then day+time, when there's no lecturer listed at all. */
+    val groupKey: String
+        get() = "$title|${lecturer ?: room ?: "$day-$startMinutes"}"
+
     private fun formatMinutes(minutes: Int): String {
         val h = minutes / 60
         val m = minutes % 60

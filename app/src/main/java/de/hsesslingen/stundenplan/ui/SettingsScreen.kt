@@ -22,9 +22,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -48,6 +51,9 @@ import de.hsesslingen.stundenplan.ui.theme.PillShape
 fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     val planState by viewModel.planState.collectAsState()
     val pickerState by viewModel.pickerState.collectAsState()
+    val favorites by viewModel.favorites.collectAsState()
+    val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
+    val favoriteIds = favorites.map { it.id }.toSet()
 
     LaunchedEffect(Unit) { viewModel.loadStudiengangList() }
 
@@ -93,6 +99,14 @@ fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
+            if (hiddenGroupKeys.isNotEmpty()) {
+                HiddenGroupsSection(
+                    hiddenGroupKeys = hiddenGroupKeys,
+                    onUnhide = { key -> viewModel.setGroupHidden(key, false) },
+                )
+                Spacer(Modifier.height(4.dp))
+            }
+
             when {
                 pickerState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -113,6 +127,8 @@ fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                         StudiengangRow(
                             studiengang = studiengang,
                             selected = studiengang.id == planState.studiengang?.id,
+                            isFavorite = studiengang.id in favoriteIds,
+                            onToggleFavorite = { viewModel.toggleFavorite(studiengang) },
                             onClick = {
                                 viewModel.selectStudiengang(studiengang)
                                 onBack()
@@ -125,8 +141,47 @@ fun SettingsScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     }
 }
 
+/** Lets the user bring back recurring event groups they previously hid from the plan (e.g. a
+ *  parallel Tutorium section they're not in) — see TimetableEvent.groupKey. */
 @Composable
-private fun StudiengangRow(studiengang: Studiengang, selected: Boolean, onClick: () -> Unit) {
+private fun HiddenGroupsSection(hiddenGroupKeys: Set<String>, onUnhide: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        Text(
+            "Ausgeblendete Veranstaltungen",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            hiddenGroupKeys.sorted().forEach { key ->
+                val parts = key.split("|", limit = 2)
+                val label = if (parts.size == 2) "${parts[0]} (${parts[1]})" else key
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { onUnhide(key) }) { Text("Einblenden") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudiengangRow(
+    studiengang: Studiengang,
+    selected: Boolean,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onClick: () -> Unit,
+) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -136,7 +191,7 @@ private fun StudiengangRow(studiengang: Studiengang, selected: Boolean, onClick:
                 else MaterialTheme.colorScheme.surfaceContainerHigh,
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -157,6 +212,14 @@ private fun StudiengangRow(studiengang: Studiengang, selected: Boolean, onClick:
         Text(studiengang.code, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
         if (selected) {
             Icon(Icons.Filled.Check, contentDescription = "Ausgewählt", tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(4.dp))
+        }
+        IconButton(onClick = onToggleFavorite) {
+            Icon(
+                if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                contentDescription = if (isFavorite) "Favorit entfernen" else "Als Favorit merken",
+                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

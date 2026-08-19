@@ -3,16 +3,21 @@ package de.hsesslingen.stundenplan.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import de.hsesslingen.stundenplan.BuildConfig
 import de.hsesslingen.stundenplan.data.QisRepository
 import de.hsesslingen.stundenplan.data.SettingsStore
 import de.hsesslingen.stundenplan.data.Studiengang
+import de.hsesslingen.stundenplan.data.TimetableCache
 import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.UpdateManager
+import de.hsesslingen.stundenplan.data.friendlyNetworkErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -22,6 +27,10 @@ data class PlanUiState(
     val weekMonday: LocalDate? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
+    // Set when the events shown are a stale offline fallback (see TimetableCache) rather than a
+    // fresh fetch — offlineSince is when that fallback was itself originally fetched.
+    val isOffline: Boolean = false,
+    val offlineSince: Long? = null,
 )
 
 data class UpdateUiState(
@@ -43,6 +52,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     private val repository = QisRepository()
     private val settingsStore = SettingsStore(application)
     private val updateManager = UpdateManager(application)
+    private val timetableCache = TimetableCache(application)
 
     private val _planState = MutableStateFlow(PlanUiState())
     val planState: StateFlow<PlanUiState> = _planState.asStateFlow()
@@ -52,6 +62,16 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _updateState = MutableStateFlow(UpdateUiState())
     val updateState: StateFlow<UpdateUiState> = _updateState.asStateFlow()
+
+    /** Studiengänge starred for quick switching (see [SettingsStore.favoriteStudiengaenge]). */
+    val favorites: StateFlow<List<Studiengang>> =
+        settingsStore.favoriteStudiengaenge.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Recurring event groups the user hid, e.g. parallel Tutorium groups they're not in — see
+     *  [TimetableEvent.groupKey]. Filtering happens in the UI layer, not here, so the raw fetched
+     *  week stays intact in [weekCache]/[timetableCache] regardless of what's currently hidden. */
+    val hiddenGroupKeys: StateFlow<Set<String>> =
+        settingsStore.hiddenEventKeys.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     // Live per-week results — QIS shows real per-week data (empty outside term dates, room
     // changes, cancellations), not a recurring template, so each visited week gets its own fetch.
@@ -68,10 +88,23 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         checkForUpdate()
     }
 
-    /** Silent background check against GitHub Releases — a failed/offline check just means no
-     *  update banner shows, never an error the user has to deal with. */
+    /**
+     * Silent background check against GitHub Releases, called on every app start — but actually
+     * hitting the network is throttled to once per [UPDATE_CHECK_MIN_INTERVAL_MS], so reopening the
+     * app repeatedly doesn't spam GitHub's API. A failed/offline check just means no update banner
+     * shows, never an error the user has to deal with.
+     *
+     * Skipped entirely in debug builds: local builds default to versionCode 1 (see
+     * app/build.gradle.kts — only CI sets APP_VERSION_CODE), which is lower than any real release,
+     * so every debug build would otherwise "find" an update on every single start.
+     */
     fun checkForUpdate() {
+        if (BuildConfig.DEBUG) return
         viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val lastCheck = settingsStore.lastUpdateCheckAt.first()
+            if (now - lastCheck < UPDATE_CHECK_MIN_INTERVAL_MS) return@launch
+            settingsStore.setLastUpdateCheckAt(now)
             try {
                 val info = updateManager.checkForUpdate()
                 if (info != null) _updateState.value = _updateState.value.copy(available = info)
@@ -101,7 +134,9 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
         val cached = weekCache[weekMonday]
         if (cached != null) {
-            _planState.value = _planState.value.copy(weekMonday = weekMonday, events = cached, error = null)
+            _planState.value = _planState.value.copy(
+                weekMonday = weekMonday, events = cached, error = null, isOffline = false, offlineSince = null,
+            )
             return
         }
         viewModelScope.launch {
@@ -109,15 +144,24 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 val events = repository.fetchTimetable(studiengang, weekMonday)
                 weekCache[weekMonday] = events
-                if (_planState.value.weekMonday == weekMonday) {
-                    _planState.value = _planState.value.copy(events = events, isLoading = false)
-                }
-            } catch (e: Exception) {
+                timetableCache.put(studiengang, weekMonday, events)
                 if (_planState.value.weekMonday == weekMonday) {
                     _planState.value = _planState.value.copy(
-                        isLoading = false,
-                        error = e.message ?: "Stundenplan konnte nicht geladen werden.",
+                        events = events, isLoading = false, isOffline = false, offlineSince = null,
                     )
+                }
+            } catch (e: Exception) {
+                if (_planState.value.weekMonday != weekMonday) return@launch
+                // Live fetch failed (most likely no connection) — fall back to whatever was last
+                // successfully fetched for this exact week, if anything, rather than just an error.
+                val offline = timetableCache.get(studiengang, weekMonday)
+                _planState.value = if (offline != null) {
+                    _planState.value.copy(
+                        events = offline.events, isLoading = false, error = null,
+                        isOffline = true, offlineSince = offline.savedAt,
+                    )
+                } else {
+                    _planState.value.copy(isLoading = false, error = friendlyNetworkErrorMessage(e))
                 }
             }
         }
@@ -131,7 +175,9 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         weekPrefetchInFlight += monday
         viewModelScope.launch {
             try {
-                weekCache[monday] = repository.fetchTimetable(studiengang, monday)
+                val events = repository.fetchTimetable(studiengang, monday)
+                weekCache[monday] = events
+                timetableCache.put(studiengang, monday, events)
             } catch (_: Exception) {
                 // Ignored — see doc comment.
             } finally {
@@ -156,7 +202,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
             } catch (e: Exception) {
                 _pickerState.value = _pickerState.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Liste der Studiengänge konnte nicht geladen werden.",
+                    error = friendlyNetworkErrorMessage(e),
                 )
             }
         }
@@ -177,5 +223,20 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
             events = emptyList(),
             weekMonday = null,
         )
+    }
+
+    fun toggleFavorite(studiengang: Studiengang) {
+        viewModelScope.launch {
+            val isFavorite = favorites.value.any { it.id == studiengang.id }
+            settingsStore.setFavorite(studiengang, favorite = !isFavorite)
+        }
+    }
+
+    fun setGroupHidden(groupKey: String, hidden: Boolean) {
+        viewModelScope.launch { settingsStore.setHidden(groupKey, hidden) }
+    }
+
+    companion object {
+        private const val UPDATE_CHECK_MIN_INTERVAL_MS = 60_000L
     }
 }

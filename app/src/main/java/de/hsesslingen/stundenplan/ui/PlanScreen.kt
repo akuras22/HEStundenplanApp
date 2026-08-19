@@ -53,6 +53,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -97,6 +99,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
+import de.hsesslingen.stundenplan.data.dayWindowFor
+import de.hsesslingen.stundenplan.data.layoutOverlaps
 import de.hsesslingen.stundenplan.data.Weekday
 import de.hsesslingen.stundenplan.ui.theme.PillShape
 import dev.chrisbanes.haze.hazeEffect
@@ -107,6 +111,7 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -289,16 +294,25 @@ private fun GlassIconButton(icon: ImageVector, contentDescription: String, onCli
 fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     val state by viewModel.planState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
+    val favorites by viewModel.favorites.collectAsState()
+    val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
     var viewMode by remember { mutableStateOf(PlanViewMode.WEEK) }
     var selectedDate by remember { mutableStateOf(LocalDate.now().nearestWeekday()) }
     var selectedEvent by remember { mutableStateOf<TimetableEvent?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showFavoritesMenu by remember { mutableStateOf(false) }
     val headerHaze = rememberHazeState()
 
     // The site serves real per-week data (empty outside term dates, room changes, cancellations),
     // not a recurring template, so every week the user swipes to needs its own live fetch.
     LaunchedEffect(state.studiengang, selectedDate.weekMonday()) {
         if (state.studiengang != null) viewModel.loadWeek(selectedDate.weekMonday())
+    }
+
+    // Parallel groups (e.g. one of three Tutorium sections) the user hid via the event detail
+    // dialog — filtered here, at display time, so the raw fetched/cached week stays intact.
+    val visibleEvents = remember(state.events, hiddenGroupKeys) {
+        state.events.filterNot { it.groupKey in hiddenGroupKeys }
     }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
@@ -322,7 +336,12 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     // like "WKB1") could size itself past the row's actual width and push the icon
                     // row's last button (Einstellungen) off-screen; an ellipsis technically fixed
                     // that but just looked broken ("Stunde…").
-                    BoxWithConstraints(Modifier.weight(1f)) {
+                    BoxWithConstraints(
+                        Modifier
+                            .weight(1f)
+                            // Only worth a tap target once there's something to switch between.
+                            .let { if (favorites.size > 1) it.clickable { showFavoritesMenu = true } else it },
+                    ) {
                         val titleFontSize = rememberFittingSingleLineFontSize(
                             text = title,
                             availableWidth = maxWidth,
@@ -336,6 +355,17 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                             fontWeight = FontWeight.ExtraBold,
                             maxLines = 1,
                         )
+                        DropdownMenu(expanded = showFavoritesMenu, onDismissRequest = { showFavoritesMenu = false }) {
+                            favorites.forEach { favorite ->
+                                DropdownMenuItem(
+                                    text = { Text(favorite.code, fontWeight = if (favorite.id == state.studiengang?.id) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = {
+                                        viewModel.selectStudiengang(favorite)
+                                        showFavoritesMenu = false
+                                    },
+                                )
+                            }
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Heute/Datum/Aktualisieren all act on a plan that doesn't exist yet
@@ -349,6 +379,10 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         }
                         GlassIconButton(Icons.Filled.Settings, "Einstellungen") { onOpenSettings() }
                     }
+                }
+
+                if (state.isOffline) {
+                    OfflineBanner(since = state.offlineSince)
                 }
 
                 Box(
@@ -399,7 +433,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         ) { mode ->
                             if (mode == PlanViewMode.WEEK) {
                                 WeekView(
-                                    events = state.events,
+                                    events = visibleEvents,
                                     selectedDate = selectedDate,
                                     courseCode = state.studiengang?.code,
                                     onEventClick = { selectedEvent = it },
@@ -411,7 +445,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                                 )
                             } else {
                                 DayView(
-                                    events = state.events,
+                                    events = visibleEvents,
                                     selectedDate = selectedDate,
                                     courseCode = state.studiengang?.code,
                                     onDateSelected = { selectedDate = it },
@@ -450,7 +484,12 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     }
 
     selectedEvent?.let { event ->
-        EventDetailDialog(event = event, onDismiss = { selectedEvent = null })
+        EventDetailDialog(
+            event = event,
+            hidden = event.groupKey in hiddenGroupKeys,
+            onToggleHidden = { hidden -> viewModel.setGroupHidden(event.groupKey, hidden) },
+            onDismiss = { selectedEvent = null },
+        )
     }
 
     updateState.available?.let { info ->
@@ -658,6 +697,31 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
     }
 }
 
+private val OFFLINE_BANNER_TIME_FORMAT = DateTimeFormatter.ofPattern("dd.MM. HH:mm")
+
+/** Shown instead of a bare error when the live fetch failed but a previous successful fetch for
+ *  this exact week is available offline (see TimetableCache) — so a dropped connection on campus
+ *  still shows a schedule, just clearly marked as possibly outdated. */
+@Composable
+private fun OfflineBanner(since: Long?) {
+    val stamp = since?.let {
+        Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime().format(OFFLINE_BANNER_TIME_FORMAT)
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f))
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            if (stamp != null) "Offline – Stand: $stamp" else "Offline",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun IconBadge(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary) {
     Box(
@@ -768,8 +832,7 @@ private fun DayTimeline(date: LocalDate, events: List<TimetableEvent>, courseCod
         return
     }
 
-    val dayStart = DAY_START_MINUTES_DEFAULT
-    val dayEnd = DAY_END_MINUTES_DEFAULT
+    val (dayStart, dayEnd) = dayWindowFor(dayEvents)
     val totalHeight = MINUTE_HEIGHT * (dayEnd - dayStart)
 
     BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
@@ -867,61 +930,8 @@ private fun DayTimelineCard(event: TimetableEvent, courseCode: String?, onClick:
     }
 }
 
-private const val DAY_START_MINUTES_DEFAULT = 8 * 60
-private const val DAY_END_MINUTES_DEFAULT = 19 * 60
 private val MINUTE_HEIGHT = 1.3.dp
 private val TIME_AXIS_WIDTH = 40.dp
-
-private data class OverlapSlot(val event: TimetableEvent, val column: Int, val columnCount: Int)
-
-/**
- * Assigns side-by-side columns to events that overlap in time — Google-Calendar-style — instead of
- * stacking them exactly on top of each other (which used to just show whichever card was drawn
- * last, with the one underneath bleeding through at half opacity).
- *
- * Events are grouped into clusters of mutually (possibly transitively) overlapping events by
- * tracking the running max end-time, then greedily packed into the fewest columns within each
- * cluster: each event goes into the first column whose previous event has already ended.
- */
-private fun layoutOverlaps(events: List<TimetableEvent>): List<OverlapSlot> {
-    val sorted = events.sortedWith(compareBy({ it.startMinutes }, { it.endMinutes }))
-    val result = mutableListOf<OverlapSlot>()
-    var cluster = mutableListOf<TimetableEvent>()
-    var clusterEnd = 0
-
-    fun flushCluster() {
-        if (cluster.isEmpty()) return
-        val columnEnds = mutableListOf<Int>()
-        val columnByEvent = HashMap<TimetableEvent, Int>()
-        for (event in cluster) {
-            val column = columnEnds.indexOfFirst { it <= event.startMinutes }
-            if (column >= 0) {
-                columnEnds[column] = event.endMinutes
-                columnByEvent[event] = column
-            } else {
-                columnEnds.add(event.endMinutes)
-                columnByEvent[event] = columnEnds.lastIndex
-            }
-        }
-        val columnCount = columnEnds.size
-        cluster.forEach { result.add(OverlapSlot(it, columnByEvent.getValue(it), columnCount)) }
-        cluster = mutableListOf()
-    }
-
-    for (event in sorted) {
-        when {
-            cluster.isEmpty() -> clusterEnd = event.endMinutes
-            event.startMinutes < clusterEnd -> clusterEnd = maxOf(clusterEnd, event.endMinutes)
-            else -> {
-                flushCluster()
-                clusterEnd = event.endMinutes
-            }
-        }
-        cluster.add(event)
-    }
-    flushCluster()
-    return result
-}
 
 /** A real Untis-style grid: all five weekdays fit on screen, hour gridlines, sticky day header, now-line, swipeable. */
 @Composable
@@ -1008,8 +1018,7 @@ private fun WeekGrid(
         return
     }
 
-    val dayStart = DAY_START_MINUTES_DEFAULT
-    val dayEnd = DAY_END_MINUTES_DEFAULT
+    val (dayStart, dayEnd) = dayWindowFor(allVisible)
     val totalMinutes = dayEnd - dayStart
     val totalHeight = MINUTE_HEIGHT * totalMinutes
 
@@ -1306,12 +1315,20 @@ private fun DayColumn(
 }
 
 @Composable
-private fun EventDetailDialog(event: TimetableEvent, onDismiss: () -> Unit) {
+private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHidden: (Boolean) -> Unit, onDismiss: () -> Unit) {
     // Samsung's own dialogs (e.g. Gallery "Details") use a plain near-black card, a bold
     // left-aligned title with no colored banner, and simple stacked label/value rows.
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen", fontWeight = FontWeight.Bold) } },
+        dismissButton = {
+            // Lets the user permanently hide a parallel group they're not in (e.g. one of three
+            // simultaneous Tutorium sections) — see TimetableEvent.groupKey for how "this group"
+            // is identified across weeks. Re-enabling happens in Einstellungen.
+            TextButton(onClick = { onToggleHidden(!hidden) }) {
+                Text(if (hidden) "Wieder einblenden" else "Ausblenden")
+            }
+        },
         shape = MaterialTheme.shapes.extraLarge,
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp,
