@@ -3,6 +3,7 @@ package de.hsesslingen.stundenplan.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -12,6 +13,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
+
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 private const val STUDIENGANG_FIELD_SEP = "||"
 
@@ -40,6 +43,9 @@ class SettingsStore(private val context: Context) {
         val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
         val NOTIFIED_DATE = stringPreferencesKey("notified_date")
         val NOTIFIED_KEYS = stringSetPreferencesKey("notified_keys")
+        val REMINDER_LEAD_MINUTES = intPreferencesKey("reminder_lead_minutes")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color_enabled")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
     val selectedStudiengang: Flow<Studiengang?> = context.dataStore.data.map { prefs ->
@@ -115,5 +121,29 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.NOTIFIED_DATE] = date
             prefs[Keys.NOTIFIED_KEYS] = (if (sameDay) prefs[Keys.NOTIFIED_KEYS] ?: emptySet() else emptySet()) + groupKey
         }
+    }
+
+    /** How many minutes before a lecture starts to notify — see LectureReminderWorker. */
+    val reminderLeadMinutes: Flow<Int> = context.dataStore.data.map { prefs -> prefs[Keys.REMINDER_LEAD_MINUTES] ?: 15 }
+
+    suspend fun setReminderLeadMinutes(minutes: Int) {
+        context.dataStore.edit { prefs -> prefs[Keys.REMINDER_LEAD_MINUTES] = minutes }
+    }
+
+    /** Whether to use Android's wallpaper-tinted Material You palette instead of the app's own
+     *  fixed neutral One UI colors (see StundenplanTheme) — off by default, since Samsung's own
+     *  first-party apps don't tint their chrome by wallpaper either. */
+    val dynamicColorEnabled: Flow<Boolean> = context.dataStore.data.map { prefs -> prefs[Keys.DYNAMIC_COLOR] ?: false }
+
+    suspend fun setDynamicColorEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.DYNAMIC_COLOR] = enabled }
+    }
+
+    val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
+        prefs[Keys.THEME_MODE]?.let { raw -> runCatching { ThemeMode.valueOf(raw) }.getOrNull() } ?: ThemeMode.SYSTEM
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { prefs -> prefs[Keys.THEME_MODE] = mode.name }
     }
 }

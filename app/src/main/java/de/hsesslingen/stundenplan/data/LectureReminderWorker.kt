@@ -34,13 +34,15 @@ class LectureReminderWorker(context: Context, params: WorkerParameters) : Corout
         }
 
         val hiddenKeys = settingsStore.hiddenEventKeys.first()
+        val leadMinutes = settingsStore.reminderLeadMinutes.first()
         val nowMinutes = LocalTime.now().let { it.hour * 60 + it.minute }
         val dateKey = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
         // A small grace window on both sides absorbs WorkManager's scheduling slack: -5 catches a
-        // run that fired a bit late (the lecture just started), +WORK_INTERVAL_MINUTES+buffer
-        // ensures every lecture gets caught by at least one run even if consecutive runs don't
-        // land on perfectly adjacent 15-minute boundaries.
-        val window = (nowMinutes - 5)..(nowMinutes + WORK_INTERVAL_MINUTES + 5)
+        // run that fired a bit late (the lecture just started), +leadMinutes+buffer ensures every
+        // lecture gets caught by at least one run even if consecutive runs don't land on perfectly
+        // adjacent boundaries. leadMinutes should stay >= WORK_INTERVAL_MINUTES (enforced by the UI
+        // picker's option range) so no run's window has a gap before the next one's.
+        val window = (nowMinutes - 5)..(nowMinutes + leadMinutes + 5)
 
         events
             .filter { it.day == weekday && it.groupKey !in hiddenKeys && it.startMinutes in window }

@@ -2,6 +2,13 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.5.0
+
+- **Einstellungen neu aufgeteilt**: eigene Seiten für Studiengänge, Benachrichtigungen, Darstellung und "Über die App", statt einer langen Liste.
+- **Neue Optionen**: Hell/Dunkel/System, dynamische Farben, Erinnerungszeit (15/20/30 Min.), manuelle Update-Prüfung, Zwischenspeicher leeren.
+- **Pfeil-Symbol beim Studiengang-Wechsel**, wenn mehrere Favoriten gesetzt sind.
+- **Update-Hinweis scrollt jetzt**, statt bei langen Änderungsprotokollen abgeschnitten zu werden.
+
 ## Version 1.0.24
 
 - **Weniger doppelte Download-Dateien**: Jedes Update hieß bisher exakt gleich ("HEStundenplan.apk"), wodurch der Browser bei mehrfachem Herunterladen automatisch "(1)", "(2)" usw. anhängen musste. Der Dateiname enthält jetzt die Versionsnummer, wodurch das nicht mehr passiert. Die heruntergeladene Datei bleibt nach der Installation trotzdem in den Downloads liegen — die App kann sie aus denselben Gründen wie beim letzten Mal (Play Protect) nicht selbst löschen, das lässt sich aber jederzeit manuell in den Downloads erledigen.

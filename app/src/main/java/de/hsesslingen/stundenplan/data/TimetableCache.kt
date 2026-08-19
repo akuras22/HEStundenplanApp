@@ -35,6 +35,12 @@ class TimetableCache(private val context: Context) {
         return decode(raw)
     }
 
+    /** Manual "Zwischenspeicher leeren" action — the offline fallback rebuilds itself from the next
+     *  successful live fetch, so this is always safe, just occasionally inconvenient offline. */
+    suspend fun clearAll() {
+        context.timetableCacheStore.edit { it.clear() }
+    }
+
     suspend fun put(studiengang: Studiengang, weekMonday: LocalDate, events: List<TimetableEvent>) {
         val key = weekKey(studiengang, weekMonday)
         context.timetableCacheStore.edit { prefs ->

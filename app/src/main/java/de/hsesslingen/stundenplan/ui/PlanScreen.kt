@@ -40,6 +40,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.EventBusy
@@ -301,7 +302,6 @@ private fun GlassIconButton(icon: ImageVector, contentDescription: String, onCli
 @Composable
 fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     val state by viewModel.planState.collectAsState()
-    val updateState by viewModel.updateState.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
     var viewMode by remember { mutableStateOf(PlanViewMode.WEEK) }
@@ -344,25 +344,37 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     // like "WKB1") could size itself past the row's actual width and push the icon
                     // row's last button (Einstellungen) off-screen; an ellipsis technically fixed
                     // that but just looked broken ("Stunde…").
+                    // Only worth a tap target — and a dropdown affordance — once there's more than
+                    // one Studiengang to switch between.
+                    val showFavoritesSwitcher = favorites.size > 1
                     BoxWithConstraints(
                         Modifier
                             .weight(1f)
-                            // Only worth a tap target once there's something to switch between.
-                            .let { if (favorites.size > 1) it.clickable { showFavoritesMenu = true } else it },
+                            .let { if (showFavoritesSwitcher) it.clickable { showFavoritesMenu = true } else it },
                     ) {
+                        val chevronReserve = if (showFavoritesSwitcher) 28.dp else 0.dp
                         val titleFontSize = rememberFittingSingleLineFontSize(
                             text = title,
-                            availableWidth = maxWidth,
+                            availableWidth = maxWidth - chevronReserve,
                             maxFontSize = MaterialTheme.typography.headlineLarge.fontSize,
                             minFontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
                         )
-                        Text(
-                            title,
-                            style = MaterialTheme.typography.headlineLarge.copy(fontSize = titleFontSize),
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.headlineLarge.copy(fontSize = titleFontSize),
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                            )
+                            if (showFavoritesSwitcher) {
+                                Icon(
+                                    Icons.Filled.ArrowDropDown,
+                                    contentDescription = "Studiengang wechseln",
+                                    modifier = Modifier.size(28.dp),
+                                )
+                            }
+                        }
                         DropdownMenu(expanded = showFavoritesMenu, onDismissRequest = { showFavoritesMenu = false }) {
                             favorites.forEach { favorite ->
                                 DropdownMenuItem(
@@ -497,14 +509,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
             hidden = event.groupKey in hiddenGroupKeys,
             onToggleHidden = { hidden -> viewModel.setGroupHidden(event.groupKey, hidden) },
             onDismiss = { selectedEvent = null },
-        )
-    }
-
-    updateState.available?.let { info ->
-        UpdateDialog(
-            info = info,
-            onInstall = { viewModel.openUpdateInBrowser() },
-            onDismiss = { viewModel.dismissUpdate() },
         )
     }
 
@@ -1389,9 +1393,11 @@ private fun renderReleaseNotesMarkdown(markdown: String): AnnotatedString = buil
 }
 
 /** OTA update prompt — tapping "Update herunterladen" opens the browser rather than downloading
- *  and installing the APK ourselves (see [UpdateManager.openDownloadInBrowser] for why). */
+ *  and installing the APK ourselves (see [UpdateManager.openDownloadInBrowser] for why). Hoisted to
+ *  MainActivity (not rendered inside PlanScreen) so it still shows while the user is on any
+ *  Einstellungen sub-page, not just the Plan screen. */
 @Composable
-private fun UpdateDialog(
+fun UpdateDialog(
     info: UpdateInfo,
     onInstall: () -> Unit,
     onDismiss: () -> Unit,
@@ -1411,7 +1417,15 @@ private fun UpdateDialog(
         tonalElevation = 0.dp,
         title = { Text("Update verfügbar: ${info.versionName}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
         text = {
-            Column {
+            // Bounded height + explicit scroll: AlertDialog's text slot doesn't scroll on its own,
+            // so a long changelog could previously overflow past the visible dialog area with no
+            // way to reach the rest of it. Release notes are also kept short by convention (see
+            // RELEASE_NOTES.md) — this is a safety net, not the primary fix.
+            Column(
+                Modifier
+                    .heightIn(max = 280.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 if (!info.releaseNotes.isNullOrBlank()) {
                     Text(renderReleaseNotesMarkdown(info.releaseNotes), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(12.dp))

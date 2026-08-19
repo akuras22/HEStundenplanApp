@@ -16,7 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_VERSION_CODE: ${{ github.run_number }}
-      APP_VERSION_NAME: "1.0.${{ github.run_number }}"
+      # versionName is a hand-set semantic version (bumped manually here for meaningful
+      # milestones), deliberately decoupled from versionCode — the latter must stay tied to
+      # github.run_number since it's what the in-app update check compares as a plain integer
+      # against the release tag ("v<run number>").
+      APP_VERSION_NAME: "1.5.0"
     steps:
       - uses: actions/checkout@v4
 

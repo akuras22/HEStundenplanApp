@@ -13,6 +13,7 @@ import de.hsesslingen.stundenplan.data.NotificationHelper
 import de.hsesslingen.stundenplan.data.QisRepository
 import de.hsesslingen.stundenplan.data.SettingsStore
 import de.hsesslingen.stundenplan.data.Studiengang
+import de.hsesslingen.stundenplan.data.ThemeMode
 import de.hsesslingen.stundenplan.data.TimetableCache
 import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
@@ -86,6 +87,17 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     val remindersEnabled: StateFlow<Boolean> =
         settingsStore.remindersEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    /** How many minutes before a lecture starts to notify — see [LectureReminderWorker]. */
+    val reminderLeadMinutes: StateFlow<Int> =
+        settingsStore.reminderLeadMinutes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 15)
+
+    /** Whether to use Android's wallpaper-tinted Material You palette (see StundenplanTheme). */
+    val dynamicColorEnabled: StateFlow<Boolean> =
+        settingsStore.dynamicColorEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val themeMode: StateFlow<ThemeMode> =
+        settingsStore.themeMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemeMode.SYSTEM)
+
     // Live per-week results — QIS shows real per-week data (empty outside term dates, room
     // changes, cancellations), not a recurring template, so each visited week gets its own fetch.
     private val weekCache = mutableMapOf<LocalDate, List<TimetableEvent>>()
@@ -117,18 +129,29 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
      * app/build.gradle.kts — only CI sets APP_VERSION_CODE), which is lower than any real release,
      * so every debug build would otherwise "find" an update on every single start.
      */
-    fun checkForUpdate() {
-        if (BuildConfig.DEBUG) return
+    /**
+     * @param force Bypasses both the debug-build skip and the rate limit — for the explicit
+     *   "Nach Updates suchen" button in Einstellungen ▸ Über die App, where the user asking right
+     *   now is exactly the point, not something to throttle.
+     * @param onResult Reports whether an update was found, once the check finishes — lets a manual
+     *   check show "Du hast die neueste Version" instead of just doing nothing when there's none.
+     */
+    fun checkForUpdate(force: Boolean = false, onResult: (foundUpdate: Boolean) -> Unit = {}) {
+        if (BuildConfig.DEBUG && !force) return
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val lastCheck = settingsStore.lastUpdateCheckAt.first()
-            if (now - lastCheck < UPDATE_CHECK_MIN_INTERVAL_MS) return@launch
-            settingsStore.setLastUpdateCheckAt(now)
+            if (!force) {
+                val now = System.currentTimeMillis()
+                val lastCheck = settingsStore.lastUpdateCheckAt.first()
+                if (now - lastCheck < UPDATE_CHECK_MIN_INTERVAL_MS) return@launch
+                settingsStore.setLastUpdateCheckAt(now)
+            }
             try {
                 val info = updateManager.checkForUpdate()
                 if (info != null) _updateState.value = _updateState.value.copy(available = info)
+                onResult(info != null)
             } catch (_: Exception) {
                 // Ignored — see doc comment.
+                onResult(false)
             }
         }
     }
@@ -287,6 +310,27 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         } else {
             workManager.cancelUniqueWork(LectureReminderWorker.WORK_NAME)
         }
+    }
+
+    fun setReminderLeadMinutes(minutes: Int) {
+        viewModelScope.launch { settingsStore.setReminderLeadMinutes(minutes) }
+    }
+
+    fun setDynamicColorEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsStore.setDynamicColorEnabled(enabled) }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { settingsStore.setThemeMode(mode) }
+    }
+
+    /** Manual "Zwischenspeicher leeren" action (Einstellungen ▸ Über die App) — clears both the
+     *  in-memory per-session cache and the persisted offline fallback. Always safe: the next
+     *  successful live fetch repopulates both. */
+    fun clearCache() {
+        weekCache.clear()
+        weekPrefetchInFlight.clear()
+        viewModelScope.launch { timetableCache.clearAll() }
     }
 
     companion object {
