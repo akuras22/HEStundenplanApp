@@ -6,6 +6,10 @@ pkgdesc="Stundenplan der Hochschule Esslingen für KDE Plasma"
 arch=('x86_64')
 url="https://github.com/akuras22/HEStundenplanApp"
 license=('GPL3')
+# Ship one plain package — a split "-debug" package (this system's default) would leave two
+# *.pkg.tar.zst files behind, which breaks any tooling (including our own CI) that expects a
+# single build artifact to pick up.
+options=('!debug')
 depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'kirigami' 'kconfig' 'kcoreaddons' 'ki18n'
          'knotifications' 'kdbusaddons' 'libxml2')
 makedepends=('cmake' 'ninja' 'extra-cmake-modules' 'git')

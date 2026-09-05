@@ -80,6 +80,10 @@ jobs:
             libxml2
 
       - uses: actions/checkout@v4
+        with:
+          # Full history so the PKGBUILD's pkgver() (git rev-list --count HEAD) is meaningful —
+          # actions/checkout's default shallow clone (depth 1) would make every build "pkgver=1".
+          fetch-depth: 0
 
       - name: Build and package (pacman package)
         env:
