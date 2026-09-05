@@ -1,0 +1,15 @@
+[Global]
+IconName=org.hsesslingen.stundenplan.desktop
+Name=HS Esslingen Stundenplan
+Comment=Erinnerungen an bevorstehende Vorlesungen
+
+[Event/lectureReminder]
+Name=Vorlesungs-Erinnerung
+Comment=Eine Vorlesung beginnt bald
+Action=Popup
+Sound=
+
+[Event/testNotification]
+Name=Test-Benachrichtigung
+Comment=Manuell ausgelöste Test-Benachrichtigung aus den Einstellungen
+Action=Popup

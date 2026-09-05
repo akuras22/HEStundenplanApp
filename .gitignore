@@ -14,3 +14,6 @@ local.properties
 *.jks
 *.keystore
 .claude/
+
+# Desktop (Qt/Kirigami) build output
+/desktop/build/

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Stundenplan
+Name[de]=Stundenplan
+GenericName=Timetable
+GenericName[de]=Stundenplan
+Comment=Stundenplan der Hochschule Esslingen
+Comment[de]=Stundenplan der Hochschule Esslingen
+Exec=hestundenplan-desktop
+Icon=org.hsesslingen.stundenplan.desktop
+Terminal=false
+Categories=Education;Calendar;Qt;KDE;
+StartupNotify=true
+X-KDE-StartupNotify=true

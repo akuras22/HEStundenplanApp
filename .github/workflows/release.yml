@@ -1,4 +1,4 @@
-name: Build and release APK
+name: Build and release
 
 on:
   push:
@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
     env:
       APP_VERSION_CODE: ${{ github.run_number }}
@@ -63,3 +63,57 @@ jobs:
           name: "${{ env.APP_VERSION_NAME }}"
           body_path: RELEASE_NOTES.md
           files: HEStundenplan-${{ env.APP_VERSION_NAME }}.apk
+
+  build-desktop:
+    # Runs after build-android so both jobs upload to the same v<run number> release without
+    # racing to create it first.
+    needs: build-android
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            cmake ninja extra-cmake-modules git \
+            qt6-base qt6-declarative qt6-svg \
+            kirigami kconfig kcoreaddons ki18n knotifications kdbusaddons \
+            libxml2
+
+      - uses: actions/checkout@v4
+
+      - name: Build and package (pacman package)
+        env:
+          APP_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          cp desktop/packaging/PKGBUILD /tmp/PKGBUILD
+          sed -i 's|source=("git+${url}.git")|source=()|' /tmp/PKGBUILD
+          sed -i '/^sha256sums=/d' /tmp/PKGBUILD
+          sed -i "s|cd \"\${srcdir}/HEStundenplanApp\"|cd \"$GITHUB_WORKSPACE\"|" /tmp/PKGBUILD
+          sed -i "s|\${srcdir}/HEStundenplanApp/desktop|$GITHUB_WORKSPACE/desktop|" /tmp/PKGBUILD
+          mkdir -p /tmp/build && chown builder:builder /tmp/build /tmp/PKGBUILD
+          su builder -c "cd /tmp/build && cp /tmp/PKGBUILD . && APP_VERSION_CODE=${APP_VERSION_CODE} makepkg -f --skippgpcheck --nocheck"
+          cp /tmp/build/*.pkg.tar.zst "$GITHUB_WORKSPACE/hestundenplan-desktop-${{ github.run_number }}-x86_64.pkg.tar.zst"
+
+      - name: Create source tarball (build-from-source path)
+        run: |
+          git archive --format=tar.gz --prefix=HEStundenplanApp-desktop/ -o "hestundenplan-desktop-${{ github.run_number }}-src.tar.gz" HEAD -- desktop CMakeLists.txt 2>/dev/null || \
+          git archive --format=tar.gz --prefix=HEStundenplanApp-desktop/ -o "hestundenplan-desktop-${{ github.run_number }}-src.tar.gz" HEAD -- desktop
+
+      - name: Upload desktop artifacts to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "${{ github.run_number }}"
+          append_body: true
+          body: |
+
+            ---
+            **Linux/KDE Plasma Desktop-App** — drei Wege zur Installation:
+            1. **Arch/CachyOS-Paket** (empfohlen für CachyOS): `hestundenplan-desktop-*.pkg.tar.zst` herunterladen, dann `sudo pacman -U hestundenplan-desktop-*.pkg.tar.zst`
+            2. **AUR/PKGBUILD selbst bauen**: `desktop/packaging/PKGBUILD` aus dem Quellcode verwenden (`makepkg -si`)
+            3. **Aus dem Quellcode bauen** (jede Distro mit Qt6/KDE Frameworks 6): Quell-Tarball entpacken, dann `cmake -S desktop -B build && cmake --build build && sudo cmake --install build`
+          files: |
+            hestundenplan-desktop-${{ github.run_number }}-x86_64.pkg.tar.zst
+            hestundenplan-desktop-${{ github.run_number }}-src.tar.gz

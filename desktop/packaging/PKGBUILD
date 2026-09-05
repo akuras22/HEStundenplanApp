@@ -1,0 +1,33 @@
+# Maintainer: akuras22
+pkgname=hestundenplan-desktop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Stundenplan der Hochschule Esslingen für KDE Plasma"
+arch=('x86_64')
+url="https://github.com/akuras22/HEStundenplanApp"
+license=('GPL3')
+depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'kirigami' 'kconfig' 'kcoreaddons' 'ki18n'
+         'knotifications' 'kdbusaddons' 'libxml2')
+makedepends=('cmake' 'ninja' 'extra-cmake-modules' 'git')
+source=("git+${url}.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "${srcdir}/HEStundenplanApp"
+  git rev-list --count HEAD
+}
+
+build() {
+  # APP_VERSION_CODE is set by CI (to github.run_number) when packaging an official release, so
+  # the in-app OTA-update check has something to compare against; local/AUR builds default to 0.
+  cmake -S "${srcdir}/HEStundenplanApp/desktop" -B build \
+    -GNinja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DAPP_VERSION_CODE="${APP_VERSION_CODE:-0}"
+  cmake --build build
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+}

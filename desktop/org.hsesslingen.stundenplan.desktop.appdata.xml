@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.hsesslingen.stundenplan.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Stundenplan</name>
+  <summary>Stundenplan der Hochschule Esslingen für KDE Plasma</summary>
+  <description>
+    <p>
+      Zeigt den live von der QIS/LSF-Seite der Hochschule Esslingen geladenen Stundenplan in
+      Wochen- und Tagesansicht, mit Suche, Vorlesungs-Erinnerungen und einer an KDE Breeze
+      angelehnten Optik.
+    </p>
+  </description>
+  <launchable type="desktop-id">org.hsesslingen.stundenplan.desktop.desktop</launchable>
+  <url type="homepage">https://github.com/akuras22/HEStundenplanApp</url>
+  <provides>
+    <binary>hestundenplan-desktop</binary>
+  </provides>
+  <content_rating type="oars-1.1" />
+</component>

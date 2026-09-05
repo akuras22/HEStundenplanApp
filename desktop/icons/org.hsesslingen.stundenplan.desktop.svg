@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4DA3FF"/>
+      <stop offset="1" stop-color="#8C6FFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="108" height="108" rx="15" ry="15" fill="url(#bg)"/>
+  <path fill="#FFFFFF" d="M43,20 A5,5 0 0 1 48,25 V31 A5,5 0 0 1 43,36 A5,5 0 0 1 38,31 V25 A5,5 0 0 1 43,20 Z"/>
+  <path fill="#FFFFFF" d="M65,20 A5,5 0 0 1 70,25 V31 A5,5 0 0 1 65,36 A5,5 0 0 1 60,31 V25 A5,5 0 0 1 65,20 Z"/>
+  <path fill="#FFFFFF" d="M34,28 H74 A10,10 0 0 1 84,38 V70 A10,10 0 0 1 74,80 H34 A10,10 0 0 1 24,70 V38 A10,10 0 0 1 34,28 Z"/>
+  <path fill="#FF8A5B" d="M34,28 H74 A10,10 0 0 1 84,38 V42 H24 V38 A10,10 0 0 1 34,28 Z"/>
+  <path fill="#DCE3F7" d="M30,46 h13 v13 h-13 z"/>
+  <path fill="#8C6FFF" d="M47,46 h13 v13 h-13 z"/>
+  <path fill="#DCE3F7" d="M64,46 h14 v13 h-14 z"/>
+  <path fill="#DCE3F7" d="M30,63 h13 v13 h-13 z"/>
+  <path fill="#DCE3F7" d="M47,63 h13 v13 h-13 z"/>
+  <path fill="#DCE3F7" d="M64,63 h14 v13 h-14 z"/>
+</svg>
