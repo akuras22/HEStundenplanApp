@@ -89,6 +89,10 @@ jobs:
         env:
           APP_VERSION_CODE: ${{ github.run_number }}
         run: |
+          # chown'ing the checkout below for the unprivileged makepkg build makes git (run as
+          # root again in the next step) refuse to touch it as "dubious ownership" — trust it
+          # globally for root up front so later git commands in this job still work.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           useradd -m builder
           chown -R builder:builder "$GITHUB_WORKSPACE"
           cp desktop/packaging/PKGBUILD /tmp/PKGBUILD
