@@ -118,7 +118,13 @@ ColumnLayout {
                     }
 
                     Repeater {
-                        model: timetableController.eventsForDay(dayColumn.index + 1)
+                        // eventsForDay() is a plain method call, so QML has no way to know it
+                        // must be re-run when the underlying data changes (a refresh, a week
+                        // switch, hiding a group) — reading weekEvents.length first (a real
+                        // NOTIFY-backed property) makes this binding depend on it too, so the
+                        // grid actually redraws instead of silently keeping stale events on screen.
+                        model: timetableController.weekEvents.length >= 0
+                               ? timetableController.eventsForDay(dayColumn.index + 1) : []
                         delegate: EventBlock {
                             required property var modelData
                             eventData: modelData

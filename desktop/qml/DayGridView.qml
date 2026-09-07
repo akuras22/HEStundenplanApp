@@ -54,7 +54,11 @@ ColumnLayout {
                  : qsTr("%1 in %2 Min.").arg(nextEvent.title).arg(nextEvent.minutesUntil))
               : ""
 
-        readonly property var raw: root.isToday ? timetableController.nextEventToday() : ({})
+        // See the matching comment in WeekGridView.qml — nextEventToday()/eventsForDay() are
+        // plain method calls with no NOTIFY of their own, so this must depend on weekEvents
+        // (which does have one) or a refresh/week-switch would leave stale data on screen.
+        readonly property var raw: (timetableController.weekEvents.length >= 0 && root.isToday)
+                                    ? timetableController.nextEventToday() : ({})
         readonly property var nextEvent: {
             if (!raw || !raw.title)
                 return ({})
@@ -115,7 +119,8 @@ ColumnLayout {
                 }
 
                 Repeater {
-                    model: timetableController.eventsForDay(root.qtDayOfWeek)
+                    model: timetableController.weekEvents.length >= 0
+                           ? timetableController.eventsForDay(root.qtDayOfWeek) : []
                     delegate: EventBlock {
                         required property var modelData
                         eventData: modelData

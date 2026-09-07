@@ -92,9 +92,11 @@ Kirigami.Page {
         return jsDay === 0 ? 7 : jsDay
     }
     // Day view only has events for one specific weekday, not the whole loaded week, so its
-    // "nothing here" check must look at that one day rather than timetableController.weekEvents.
+    // "nothing here" check must look at that one day rather than timetableController.weekEvents —
+    // but eventsForDay() itself has no NOTIFY, so this ternary's day-view branch must still touch
+    // weekEvents.length first (see WeekGridView.qml) or a refresh/week-switch won't re-run it.
     readonly property bool viewHasEvents: root.dayView
-        ? timetableController.eventsForDay(root.currentDateQtDay).length > 0
+        ? (timetableController.weekEvents.length >= 0 && timetableController.eventsForDay(root.currentDateQtDay).length > 0)
         : timetableController.weekEvents.length > 0
 
     actions: [
