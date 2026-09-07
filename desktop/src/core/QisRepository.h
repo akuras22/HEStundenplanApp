@@ -4,7 +4,9 @@
 #include <QDate>
 #include <QList>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QObject>
+#include <QPointer>
 
 namespace stundenplan {
 
@@ -32,9 +34,13 @@ Q_SIGNALS:
     void fetchFailed(const QString &message, bool forTimetable);
 
 private:
-    void execute(const QUrl &url, const std::function<void(const QString &)> &onSuccess, bool forTimetable);
+    QNetworkReply *execute(const QUrl &url, const std::function<void(const QString &)> &onSuccess, bool forTimetable);
 
     QNetworkAccessManager *m_manager;
+    // Rapidly stepping through weeks/days would otherwise fire overlapping requests whose
+    // replies can arrive out of order, briefly showing the wrong week's events — aborting the
+    // previous in-flight timetable request when a new one starts keeps only the latest live.
+    QPointer<QNetworkReply> m_pendingTimetableReply;
 };
 
 } // namespace stundenplan

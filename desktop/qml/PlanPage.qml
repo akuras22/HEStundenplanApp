@@ -87,6 +87,16 @@ Kirigami.Page {
         timetableController.setWeekMonday(d)
     }
 
+    readonly property int currentDateQtDay: {
+        var jsDay = root.currentDate.getDay()
+        return jsDay === 0 ? 7 : jsDay
+    }
+    // Day view only has events for one specific weekday, not the whole loaded week, so its
+    // "nothing here" check must look at that one day rather than timetableController.weekEvents.
+    readonly property bool viewHasEvents: root.dayView
+        ? timetableController.eventsForDay(root.currentDateQtDay).length > 0
+        : timetableController.weekEvents.length > 0
+
     actions: [
         Kirigami.Action {
             icon.name: "search"
@@ -129,6 +139,21 @@ Kirigami.Page {
             type: Kirigami.MessageType.Error
             visible: !!timetableController.errorMessage
             text: timetableController.errorMessage
+        }
+
+        Kirigami.InlineMessage {
+            id: emptyWeekMessage
+            Layout.fillWidth: true
+            type: Kirigami.MessageType.Information
+            // Shown once a fetch actually succeeded but this specific week has no events —
+            // e.g. semester break or before the term starts — so an empty grid doesn't read as
+            // "the app can't find my schedule" when QIS itself has nothing to show.
+            visible: !!timetableController.selectedStudiengang.code && !timetableController.loading
+                     && !timetableController.errorMessage && !timetableController.offline
+                     && !root.viewHasEvents
+            text: root.dayView
+                  ? qsTr("Keine Termine an diesem Tag — vermutlich vorlesungsfreie Zeit oder frei. Mit den Pfeilen andere Tage ansehen.")
+                  : qsTr("Keine Termine in dieser Woche gefunden — vermutlich vorlesungsfreie Zeit. Mit den Pfeilen oder \"Heute\" andere Wochen ansehen.")
         }
 
         Kirigami.PlaceholderMessage {

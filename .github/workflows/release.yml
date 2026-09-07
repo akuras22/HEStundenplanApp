@@ -11,16 +11,20 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+env:
+  # Hand-set semantic version (bump for meaningful milestones — e.g. this desktop app launch),
+  # shown as the release title. Deliberately decoupled from the release TAG, which stays
+  # "v<github.run_number>": that's what both apps' in-app update checks compare as a plain
+  # integer, and changing it would break the already-shipped Android app's update detection for
+  # anyone with an older version installed. Shared at workflow level so both jobs below use the
+  # exact same title instead of two copies that can drift apart.
+  APP_VERSION_NAME: "1.9.0"
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
     env:
       APP_VERSION_CODE: ${{ github.run_number }}
-      # versionName is a hand-set semantic version (bumped manually here for meaningful
-      # milestones), deliberately decoupled from versionCode — the latter must stay tied to
-      # github.run_number since it's what the in-app update check compares as a plain integer
-      # against the release tag ("v<run number>").
-      APP_VERSION_NAME: "1.8.0"
     steps:
       - uses: actions/checkout@v4
 
@@ -113,7 +117,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: "${{ github.run_number }}"
+          # No `name:` here — this call only adds files/body to the release build-android already
+          # created with the real title. Setting it again (previously to the bare run number, a
+          # regression) would clobber that title.
           append_body: true
           body: |
 

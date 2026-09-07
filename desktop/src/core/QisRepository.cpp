@@ -13,6 +13,7 @@ const char *kBase = "https://www3.hs-esslingen.de/qislsf/rds";
 const char *kUserAgent =
     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/120.0.0.0 Mobile Safari/537.36";
+constexpr int kRequestTimeoutMs = 15000;
 } // namespace
 
 QisRepository::QisRepository(QObject *parent)
@@ -21,15 +22,23 @@ QisRepository::QisRepository(QObject *parent)
 {
 }
 
-void QisRepository::execute(const QUrl &url, const std::function<void(const QString &)> &onSuccess, bool forTimetable)
+QNetworkReply *QisRepository::execute(const QUrl &url, const std::function<void(const QString &)> &onSuccess, bool forTimetable)
 {
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", kUserAgent);
     request.setRawHeader("Accept-Language", "de-DE,de;q=0.9");
+    // Without this, a stalled connection (bad campus wifi, a hung proxy) leaves the UI's loading
+    // spinner running forever instead of surfacing an error the offline-cache fallback can act on.
+    request.setTransferTimeout(kRequestTimeoutMs);
 
     QNetworkReply *reply = m_manager->get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply, onSuccess, forTimetable, url]() {
         reply->deleteLater();
+        if (reply->error() == QNetworkReply::OperationCanceledError) {
+            // Superseded by a newer request (see fetchTimetable's abort-the-previous-one logic) —
+            // not a real failure, so no fetchFailed here; the newer request's own callback wins.
+            return;
+        }
         if (reply->error() != QNetworkReply::NoError) {
             Q_EMIT fetchFailed(QStringLiteral("HTTP-Fehler beim Laden von %1: %2").arg(url.toString(), reply->errorString()),
                                 forTimetable);
@@ -42,6 +51,7 @@ void QisRepository::execute(const QUrl &url, const std::function<void(const QStr
         }
         onSuccess(QString::fromUtf8(body));
     });
+    return reply;
 }
 
 void QisRepository::fetchStudiengaenge()
@@ -66,6 +76,11 @@ void QisRepository::fetchStudiengaenge()
 
 void QisRepository::fetchTimetable(const Studiengang &studiengang, const QDate &weekMonday)
 {
+    // A rapid string of "next week" clicks would otherwise leave several requests in flight;
+    // whichever happened to respond last would win regardless of which week it was actually for.
+    if (m_pendingTimetableReply)
+        m_pendingTimetableReply->abort();
+
     int isoYear = 0;
     const int isoWeek = weekMonday.weekNumber(&isoYear);
 
@@ -82,16 +97,15 @@ void QisRepository::fetchTimetable(const Studiengang &studiengang, const QDate &
     query.addQueryItem(QStringLiteral("noDBAction"), QStringLiteral("y"));
     url.setQuery(query);
 
-    execute(
+    m_pendingTimetableReply = execute(
         url,
         [this](const QString &html) {
-            QString error;
-            const auto events = QisParser::parseTimetable(html, &error);
-            if (!error.isEmpty()) {
-                Q_EMIT fetchFailed(error, true);
-                return;
-            }
-            Q_EMIT timetableFetched(events);
+            QString errorMessage;
+            const auto events = QisParser::parseTimetable(html, &errorMessage);
+            if (!errorMessage.isEmpty())
+                Q_EMIT fetchFailed(errorMessage, true);
+            else
+                Q_EMIT timetableFetched(events);
         },
         true);
 }
