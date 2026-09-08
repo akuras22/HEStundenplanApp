@@ -26,21 +26,29 @@ struct UpdateInfo {
 class UpdateManager : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QString appVersionName READ appVersionName CONSTANT)
 public:
     explicit UpdateManager(QObject *parent = nullptr);
 
     /** Emits updateAvailable() only if the latest release is newer than APP_VERSION_CODE. */
-    void checkForUpdate();
+    Q_INVOKABLE void checkForUpdate();
 
     /** Always fetches the latest release notes, regardless of version — for the in-app changelog. */
-    void fetchLatestReleaseNotes();
+    Q_INVOKABLE void fetchLatestReleaseNotes();
 
     Q_INVOKABLE void openReleasePage(const QString &url) const;
+
+    /** The human-readable version shown in "Über die App" — compiled in from the same
+     *  APP_VERSION_NAME CI passes as the release title, so it can't drift out of sync with it. */
+    static QString appVersionName();
 
 Q_SIGNALS:
     void updateAvailable(const stundenplan::UpdateInfo &info);
     void releaseNotesFetched(const stundenplan::UpdateInfo &info);
     void updateCheckFailed(const QString &message);
+    /** Update check succeeded but the installed version is already current — without this,
+     *  clicking "Nach Updates suchen" while up to date looked exactly like a dead button. */
+    void alreadyUpToDate();
 
 private:
     void fetchLatestRelease(const std::function<void(std::optional<UpdateInfo>)> &callback);

@@ -22,13 +22,15 @@ pkgver() {
 }
 
 build() {
-  # APP_VERSION_CODE is set by CI (to github.run_number) when packaging an official release, so
-  # the in-app OTA-update check has something to compare against; local/AUR builds default to 0.
+  # APP_VERSION_CODE/APP_VERSION_NAME are set by CI (to github.run_number and the release title)
+  # when packaging an official release, so the in-app OTA-update check and the "Über die App"
+  # version string have something real to work with; local/AUR builds default to 0/"dev".
   cmake -S "${srcdir}/HEStundenplanApp/desktop" -B build \
     -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DAPP_VERSION_CODE="${APP_VERSION_CODE:-0}"
+    -DAPP_VERSION_CODE="${APP_VERSION_CODE:-0}" \
+    -DAPP_VERSION_NAME="${APP_VERSION_NAME:-dev}"
   cmake --build build
 }
 

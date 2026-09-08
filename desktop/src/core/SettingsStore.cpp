@@ -188,6 +188,7 @@ void SettingsStore::setReminderLeadMinutes(const QVariantList &minutes)
         raw.append(QString::number(v.toInt()));
     g.writeEntry("reminderLeadMinutes", raw);
     g.sync();
+    Q_EMIT reminderLeadMinutesChanged();
 }
 
 bool SettingsStore::defaultViewIsDay() const

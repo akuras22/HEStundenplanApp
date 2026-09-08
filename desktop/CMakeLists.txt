@@ -6,6 +6,9 @@ project(hestundenplan-desktop VERSION 0.1.0 LANGUAGES CXX)
 # check has something meaningful to compare the latest release tag ("v<run number>") against.
 # Local/dev builds default to 0, which never reports an update as available.
 set(APP_VERSION_CODE "0" CACHE STRING "Build version code compared against GitHub release tags")
+# Human-readable version shown in "Über die App" — set by CI to the same APP_VERSION_NAME used
+# for the release title.
+set(APP_VERSION_NAME "dev" CACHE STRING "Human-readable version shown in the app")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -92,6 +95,15 @@ qt_add_qml_module(hestundenplan-desktop
 target_include_directories(hestundenplan-desktop PRIVATE
     src
     ${LIBXML2_INCLUDE_DIR}
+)
+
+# APP_VERSION_CODE/APP_VERSION_NAME were previously only declared as CMake cache variables and
+# never actually forwarded to the compiler — every build silently compiled in the "0"/"dev"
+# fallback from UpdateManager.cpp regardless of what CI passed via -D, so the OTA-update check
+# never worked and the About page always showed a stale hardcoded version string.
+target_compile_definitions(hestundenplan-desktop PRIVATE
+    APP_VERSION_CODE=${APP_VERSION_CODE}
+    APP_VERSION_NAME="${APP_VERSION_NAME}"
 )
 
 target_link_libraries(hestundenplan-desktop PRIVATE

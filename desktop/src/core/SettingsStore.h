@@ -27,6 +27,8 @@ class SettingsStore : public QObject
     Q_PROPERTY(bool blockShowRoom READ blockShowRoom WRITE setBlockShowRoom NOTIFY blockShowRoomChanged)
     Q_PROPERTY(bool blockShowLecturer READ blockShowLecturer WRITE setBlockShowLecturer NOTIFY blockShowLecturerChanged)
     Q_PROPERTY(bool remindersEnabled READ remindersEnabled WRITE setRemindersEnabled NOTIFY remindersEnabledChanged)
+    Q_PROPERTY(QVariantList reminderLeadMinutes READ reminderLeadMinutes WRITE setReminderLeadMinutes NOTIFY
+                   reminderLeadMinutesChanged)
 
 public:
     explicit SettingsStore(QObject *parent = nullptr);
@@ -51,8 +53,8 @@ public:
     void markNotifiedToday(const QString &date, const QString &groupKey);
 
     QSet<int> reminderLeadMinutesSet() const;
-    Q_INVOKABLE QVariantList reminderLeadMinutes() const;
-    Q_INVOKABLE void setReminderLeadMinutes(const QVariantList &minutes);
+    QVariantList reminderLeadMinutes() const;
+    void setReminderLeadMinutes(const QVariantList &minutes);
 
     bool defaultViewIsDay() const;
     void setDefaultViewIsDay(bool isDay);
@@ -72,6 +74,7 @@ Q_SIGNALS:
     void blockShowRoomChanged();
     void blockShowLecturerChanged();
     void remindersEnabledChanged();
+    void reminderLeadMinutesChanged();
     void favoritesChanged();
     void hiddenEventKeysChanged();
     void selectedStudiengangChanged();

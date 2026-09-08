@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
     KAboutData aboutData(QStringLiteral("hestundenplan-desktop"),
                           i18n("Stundenplan"),
-                          QStringLiteral("0.1.0"),
+                          stundenplan::UpdateManager::appVersionName(),
                           i18n("Stundenplan der Hochschule Esslingen"),
                           KAboutLicense::GPL_V3,
                           i18n("© 2026 HS Esslingen Stundenplan"));

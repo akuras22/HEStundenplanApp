@@ -11,6 +11,9 @@
 #ifndef APP_VERSION_CODE
 #define APP_VERSION_CODE 0
 #endif
+#ifndef APP_VERSION_NAME
+#define APP_VERSION_NAME "dev"
+#endif
 
 namespace stundenplan {
 
@@ -70,8 +73,17 @@ void UpdateManager::checkForUpdate()
         }
         if (info->versionCode > APP_VERSION_CODE) {
             Q_EMIT updateAvailable(*info);
+        } else {
+            // Otherwise a click on "Nach Updates suchen" had no visible effect at all —
+            // silence reads as "the button doesn't do anything", not "you're already current".
+            Q_EMIT alreadyUpToDate();
         }
     });
+}
+
+QString UpdateManager::appVersionName()
+{
+    return QStringLiteral(APP_VERSION_NAME);
 }
 
 void UpdateManager::fetchLatestReleaseNotes()

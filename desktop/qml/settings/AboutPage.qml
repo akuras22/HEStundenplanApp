@@ -15,6 +15,19 @@ Kirigami.ScrollablePage {
         id: changelogDialog
     }
 
+    function showStatus(text, type) {
+        statusMessage.text = text
+        statusMessage.type = type
+        statusMessage.visible = true
+        statusHideTimer.restart()
+    }
+
+    Timer {
+        id: statusHideTimer
+        interval: 4000
+        onTriggered: statusMessage.visible = false
+    }
+
     Connections {
         target: updateManager
         function onUpdateAvailable(info) {
@@ -26,8 +39,10 @@ Kirigami.ScrollablePage {
             changelogDialog.open()
         }
         function onUpdateCheckFailed(message) {
-            statusMessage.text = message
-            statusMessage.visible = true
+            root.showStatus(message, Kirigami.MessageType.Warning)
+        }
+        function onAlreadyUpToDate() {
+            root.showStatus(qsTr("Du hast bereits die neueste Version."), Kirigami.MessageType.Positive)
         }
     }
 
@@ -48,7 +63,7 @@ Kirigami.ScrollablePage {
                     level: 2
                 }
                 Controls.Label {
-                    text: qsTr("Version 0.1.0 (Desktop)")
+                    text: qsTr("Version %1 (Desktop)").arg(updateManager.appVersionName)
                     color: Kirigami.Theme.disabledTextColor
                 }
             }
@@ -79,9 +94,7 @@ Kirigami.ScrollablePage {
             icon.name: "edit-clear-all"
             onClicked: {
                 timetableController.clearCache()
-                statusMessage.text = qsTr("Zwischenspeicher geleert.")
-                statusMessage.type = Kirigami.MessageType.Positive
-                statusMessage.visible = true
+                root.showStatus(qsTr("Zwischenspeicher geleert."), Kirigami.MessageType.Positive)
             }
         }
         Controls.Button {

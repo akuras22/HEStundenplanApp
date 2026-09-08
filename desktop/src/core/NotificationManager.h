@@ -16,7 +16,7 @@ public:
     /** Posts a "starts soon" reminder; clicking it asks to jump to `date`'s Tag-Ansicht. */
     void notifyLectureReminder(const QString &title, const QString &room, int minutesUntilStart, const QDate &date);
 
-    void notifyTest();
+    Q_INVOKABLE void notifyTest();
 
 Q_SIGNALS:
     void openRequested(const QDate &date);

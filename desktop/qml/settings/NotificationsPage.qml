@@ -8,22 +8,22 @@ Kirigami.ScrollablePage {
     title: qsTr("Benachrichtigungen")
 
     readonly property var leadPresets: [5, 10, 15, 20, 30, 45, 60]
-    readonly property var customLeadMinutes: settingsStore.reminderLeadMinutes().filter(
+    readonly property var customLeadMinutes: settingsStore.reminderLeadMinutes.filter(
         (m) => root.leadPresets.indexOf(m) < 0
     )
 
     function addCustomLead(minutes) {
         if (minutes <= 0)
             return
-        var current = new Set(settingsStore.reminderLeadMinutes())
+        var current = new Set(settingsStore.reminderLeadMinutes)
         current.add(minutes)
-        settingsStore.setReminderLeadMinutes(Array.from(current))
+        settingsStore.reminderLeadMinutes = Array.from(current)
     }
 
     function removeLead(minutes) {
-        var current = new Set(settingsStore.reminderLeadMinutes())
+        var current = new Set(settingsStore.reminderLeadMinutes)
         current.delete(minutes)
-        settingsStore.setReminderLeadMinutes(Array.from(current))
+        settingsStore.reminderLeadMinutes = Array.from(current)
     }
 
     ColumnLayout {
@@ -56,14 +56,14 @@ Kirigami.ScrollablePage {
                 delegate: Controls.CheckBox {
                     required property int modelData
                     text: qsTr("%1 Min.").arg(modelData)
-                    checked: settingsStore.reminderLeadMinutes().indexOf(modelData) >= 0
+                    checked: settingsStore.reminderLeadMinutes.indexOf(modelData) >= 0
                     onToggled: {
-                        var current = new Set(settingsStore.reminderLeadMinutes())
+                        var current = new Set(settingsStore.reminderLeadMinutes)
                         if (checked)
                             current.add(modelData)
                         else
                             current.delete(modelData)
-                        settingsStore.setReminderLeadMinutes(Array.from(current))
+                        settingsStore.reminderLeadMinutes = Array.from(current)
                     }
                 }
             }

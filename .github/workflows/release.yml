@@ -92,6 +92,7 @@ jobs:
       - name: Build and package (pacman package)
         env:
           APP_VERSION_CODE: ${{ github.run_number }}
+          APP_VERSION_NAME: ${{ env.APP_VERSION_NAME }}
         run: |
           # chown'ing the checkout below for the unprivileged makepkg build makes git (run as
           # root again in the next step) refuse to touch it as "dubious ownership" — trust it
@@ -105,7 +106,7 @@ jobs:
           sed -i "s|cd \"\${srcdir}/HEStundenplanApp\"|cd \"$GITHUB_WORKSPACE\"|" /tmp/PKGBUILD
           sed -i "s|\${srcdir}/HEStundenplanApp/desktop|$GITHUB_WORKSPACE/desktop|" /tmp/PKGBUILD
           mkdir -p /tmp/build && chown builder:builder /tmp/build /tmp/PKGBUILD
-          su builder -c "cd /tmp/build && cp /tmp/PKGBUILD . && APP_VERSION_CODE=${APP_VERSION_CODE} makepkg -f --skippgpcheck --nocheck"
+          su builder -c "cd /tmp/build && cp /tmp/PKGBUILD . && APP_VERSION_CODE=${APP_VERSION_CODE} APP_VERSION_NAME=${APP_VERSION_NAME} makepkg -f --skippgpcheck --nocheck"
           cp /tmp/build/*.pkg.tar.zst "$GITHUB_WORKSPACE/hestundenplan-desktop-${{ github.run_number }}-x86_64.pkg.tar.zst"
 
       - name: Create source tarball (build-from-source path)

@@ -30,23 +30,6 @@ ColumnLayout {
 
     spacing: 0
 
-    Kirigami.Heading {
-        level: 4
-        Layout.fillWidth: true
-        Layout.leftMargin: Kirigami.Units.gridUnit * 2.5 + Kirigami.Units.smallSpacing
-        // The day chips below only show a bare day-of-month number, so the month (and year,
-        // when the week crosses a year boundary) needs to be shown once, up here.
-        text: {
-            var mon = root.dateForColumn(0)
-            var fri = root.dateForColumn(4)
-            if (mon.getMonth() === fri.getMonth())
-                return Qt.formatDate(mon, "MMMM yyyy")
-            if (mon.getFullYear() === fri.getFullYear())
-                return Qt.formatDate(mon, "MMMM") + " / " + Qt.formatDate(fri, "MMMM yyyy")
-            return Qt.formatDate(mon, "MMMM yyyy") + " / " + Qt.formatDate(fri, "MMMM yyyy")
-        }
-    }
-
     RowLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
@@ -56,7 +39,7 @@ ColumnLayout {
             delegate: DateChip {
                 Layout.fillWidth: true
                 dayLabel: root.dayNames[index]
-                dateLabel: root.dateForColumn(index).getDate().toString()
+                dateLabel: Qt.formatDate(root.dateForColumn(index), "d.M.")
                 isToday: root.isSameDate(root.dateForColumn(index), new Date())
             }
         }
