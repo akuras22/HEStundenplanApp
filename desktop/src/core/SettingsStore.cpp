@@ -28,47 +28,6 @@ std::optional<Studiengang> decodeStudiengang(const QString &raw)
 
 } // namespace
 
-QColor SettingsStore::accentPresetColor(AccentPreset preset)
-{
-    switch (preset) {
-    case AccentPreset::Green:
-        return QColor(0xFF2E9E5B);
-    case AccentPreset::Purple:
-        return QColor(0xFF8B5CF6);
-    case AccentPreset::Orange:
-        return QColor(0xFFE0762F);
-    case AccentPreset::Red:
-        return QColor(0xFFE0473D);
-    case AccentPreset::Pink:
-        return QColor(0xFFE0508F);
-    case AccentPreset::Default:
-    case AccentPreset::Custom:
-        return QColor();
-    }
-    return QColor();
-}
-
-QString SettingsStore::accentPresetLabel(AccentPreset preset)
-{
-    switch (preset) {
-    case AccentPreset::Default:
-        return QStringLiteral("Standard");
-    case AccentPreset::Green:
-        return QStringLiteral("Grün");
-    case AccentPreset::Purple:
-        return QStringLiteral("Lila");
-    case AccentPreset::Orange:
-        return QStringLiteral("Orange");
-    case AccentPreset::Red:
-        return QStringLiteral("Rot");
-    case AccentPreset::Pink:
-        return QStringLiteral("Pink");
-    case AccentPreset::Custom:
-        return QStringLiteral("Benutzerdefiniert");
-    }
-    return {};
-}
-
 SettingsStore::SettingsStore(QObject *parent)
     : QObject(parent)
     , m_config(KSharedConfig::openConfig(QString::fromLatin1(kConfigFile)))
@@ -231,60 +190,6 @@ void SettingsStore::setReminderLeadMinutes(const QVariantList &minutes)
     g.sync();
 }
 
-SettingsStore::ThemeMode SettingsStore::themeMode() const
-{
-    const int raw = group(QString::fromLatin1(kGroupAppearance)).readEntry("themeMode", int(ThemeMode::System));
-    return static_cast<ThemeMode>(raw);
-}
-
-void SettingsStore::setThemeMode(ThemeMode mode)
-{
-    auto g = group(QString::fromLatin1(kGroupAppearance));
-    g.writeEntry("themeMode", int(mode));
-    g.sync();
-    Q_EMIT themeModeChanged();
-}
-
-SettingsStore::AccentPreset SettingsStore::accentPreset() const
-{
-    const int raw = group(QString::fromLatin1(kGroupAppearance)).readEntry("accentPreset", int(AccentPreset::Default));
-    return static_cast<AccentPreset>(raw);
-}
-
-void SettingsStore::setAccentPreset(AccentPreset preset)
-{
-    auto g = group(QString::fromLatin1(kGroupAppearance));
-    g.writeEntry("accentPreset", int(preset));
-    g.sync();
-    Q_EMIT accentPresetChanged();
-}
-
-QColor SettingsStore::customAccentColor() const
-{
-    return group(QString::fromLatin1(kGroupAppearance)).readEntry("customAccentColor", QColor());
-}
-
-void SettingsStore::setCustomAccentColor(const QColor &color)
-{
-    auto g = group(QString::fromLatin1(kGroupAppearance));
-    g.writeEntry("customAccentColor", color);
-    g.sync();
-    Q_EMIT customAccentColorChanged();
-}
-
-QColor SettingsStore::customBackgroundColor() const
-{
-    return group(QString::fromLatin1(kGroupAppearance)).readEntry("customBackgroundColor", QColor());
-}
-
-void SettingsStore::setCustomBackgroundColor(const QColor &color)
-{
-    auto g = group(QString::fromLatin1(kGroupAppearance));
-    g.writeEntry("customBackgroundColor", color);
-    g.sync();
-    Q_EMIT customBackgroundColorChanged();
-}
-
 bool SettingsStore::defaultViewIsDay() const
 {
     return group(QString::fromLatin1(kGroupAppearance)).readEntry("defaultViewIsDay", false);
@@ -340,18 +245,15 @@ void SettingsStore::setBlockShowLecturer(bool show)
 void SettingsStore::resetAppearance()
 {
     auto g = group(QString::fromLatin1(kGroupAppearance));
-    g.writeEntry("themeMode", int(ThemeMode::System));
-    g.writeEntry("accentPreset", int(AccentPreset::Default));
+    // Clean up the now-unused theme/accent keys from earlier versions, if present.
+    g.deleteEntry("themeMode");
+    g.deleteEntry("accentPreset");
     g.deleteEntry("customAccentColor");
     g.deleteEntry("customBackgroundColor");
     g.writeEntry("blockShowTime", true);
     g.writeEntry("blockShowRoom", true);
     g.writeEntry("blockShowLecturer", false);
     g.sync();
-    Q_EMIT themeModeChanged();
-    Q_EMIT accentPresetChanged();
-    Q_EMIT customAccentColorChanged();
-    Q_EMIT customBackgroundColorChanged();
     Q_EMIT blockShowTimeChanged();
     Q_EMIT blockShowRoomChanged();
     Q_EMIT blockShowLecturerChanged();
