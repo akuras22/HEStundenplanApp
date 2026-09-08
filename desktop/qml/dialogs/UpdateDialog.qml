@@ -19,11 +19,16 @@ Kirigami.OverlaySheet {
         spacing: Kirigami.Units.smallSpacing
 
         Controls.ScrollView {
+            id: scrollView
             Layout.fillWidth: true
             Layout.preferredHeight: Kirigami.Units.gridUnit * 12
+
             Controls.Label {
-                width: parent.width
+                // See the matching comment in ChangelogDialog.qml — must bind to the ScrollView's
+                // own width, not "parent", or this never wraps.
+                width: scrollView.availableWidth
                 text: root.updateInfo.releaseNotes || qsTr("Keine Details verfügbar.")
+                textFormat: Text.MarkdownText
                 wrapMode: Text.Wrap
             }
         }

@@ -18,7 +18,7 @@ env:
   # integer, and changing it would break the already-shipped Android app's update detection for
   # anyone with an older version installed. Shared at workflow level so both jobs below use the
   # exact same title instead of two copies that can drift apart.
-  APP_VERSION_NAME: "1.9.1"
+  APP_VERSION_NAME: "1.9.2"
 
 jobs:
   build-android:
