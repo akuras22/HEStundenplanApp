@@ -18,7 +18,7 @@ env:
   # integer, and changing it would break the already-shipped Android app's update detection for
   # anyone with an older version installed. Shared at workflow level so both jobs below use the
   # exact same title instead of two copies that can drift apart.
-  APP_VERSION_NAME: "1.9.2"
+  APP_VERSION_NAME: "1.9.3"
 
 jobs:
   build-android:
@@ -118,17 +118,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          # No `name:` here — this call only adds files/body to the release build-android already
-          # created with the real title. Setting it again (previously to the bare run number, a
-          # regression) would clobber that title.
-          append_body: true
-          body: |
-
-            ---
-            **Linux/KDE Plasma Desktop-App** — drei Wege zur Installation:
-            1. **Arch/CachyOS-Paket** (empfohlen für CachyOS): `hestundenplan-desktop-*.pkg.tar.zst` herunterladen, dann `sudo pacman -U hestundenplan-desktop-*.pkg.tar.zst`
-            2. **AUR/PKGBUILD selbst bauen**: `desktop/packaging/PKGBUILD` aus dem Quellcode verwenden (`makepkg -si`)
-            3. **Aus dem Quellcode bauen** (jede Distro mit Qt6/KDE Frameworks 6): Quell-Tarball entpacken, dann `cmake -S desktop -B build && cmake --build build && sudo cmake --install build`
+          # No `name:` or `body:` here — this call only adds files to the release build-android
+          # already created with the real title and changelog body. Both apps' in-app "Änderungs-
+          # protokoll" read that same shared body via the GitHub API, so appending desktop-only
+          # install instructions here (a former regression) made Android users see irrelevant
+          # Linux/pacman text in their changelog — that's documented in README.md instead now.
           files: |
             hestundenplan-desktop-${{ github.run_number }}-x86_64.pkg.tar.zst
             hestundenplan-desktop-${{ github.run_number }}-src.tar.gz
