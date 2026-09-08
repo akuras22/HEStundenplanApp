@@ -38,7 +38,6 @@ int main(int argc, char *argv[])
     qRegisterMetaType<TimetableEvent>("stundenplan::TimetableEvent");
     qRegisterMetaType<QList<Studiengang>>("QList<stundenplan::Studiengang>");
     qRegisterMetaType<QList<TimetableEvent>>("QList<stundenplan::TimetableEvent>");
-    qRegisterMetaType<UpdateInfo>("stundenplan::UpdateInfo");
 
     auto *settings = new SettingsStore(&app);
     auto *cache = new TimetableCache();

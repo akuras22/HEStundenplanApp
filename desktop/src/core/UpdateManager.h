@@ -3,6 +3,7 @@
 #include <QNetworkAccessManager>
 #include <QObject>
 #include <QString>
+#include <QVariantMap>
 #include <optional>
 
 namespace stundenplan {
@@ -43,8 +44,11 @@ public:
     static QString appVersionName();
 
 Q_SIGNALS:
-    void updateAvailable(const stundenplan::UpdateInfo &info);
-    void releaseNotesFetched(const stundenplan::UpdateInfo &info);
+    // Plain UpdateInfo structs aren't readable from QML (no Q_GADGET/Q_PROPERTY, so a field access
+    // like `info.releaseNotes` just silently evaluates to undefined) — emit QVariantMap instead,
+    // whose keys QML can read directly as object properties.
+    void updateAvailable(const QVariantMap &info);
+    void releaseNotesFetched(const QVariantMap &info);
     void updateCheckFailed(const QString &message);
     /** Update check succeeded but the installed version is already current — without this,
      *  clicking "Nach Updates suchen" while up to date looked exactly like a dead button. */
@@ -57,5 +61,3 @@ private:
 };
 
 } // namespace stundenplan
-
-Q_DECLARE_METATYPE(stundenplan::UpdateInfo)

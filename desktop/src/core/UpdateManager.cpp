@@ -19,6 +19,16 @@ namespace stundenplan {
 
 namespace {
 const char *kReleasesUrl = "https://api.github.com/repos/akuras22/HEStundenplanApp/releases/latest";
+
+QVariantMap toVariantMap(const UpdateInfo &info)
+{
+    QVariantMap map;
+    map[QStringLiteral("versionCode")] = info.versionCode;
+    map[QStringLiteral("versionName")] = info.versionName;
+    map[QStringLiteral("releaseUrl")] = info.releaseUrl;
+    map[QStringLiteral("releaseNotes")] = info.releaseNotes;
+    return map;
+}
 } // namespace
 
 UpdateManager::UpdateManager(QObject *parent)
@@ -72,7 +82,7 @@ void UpdateManager::checkForUpdate()
             return;
         }
         if (info->versionCode > APP_VERSION_CODE) {
-            Q_EMIT updateAvailable(*info);
+            Q_EMIT updateAvailable(toVariantMap(*info));
         } else {
             // Otherwise a click on "Nach Updates suchen" had no visible effect at all —
             // silence reads as "the button doesn't do anything", not "you're already current".
@@ -90,7 +100,7 @@ void UpdateManager::fetchLatestReleaseNotes()
 {
     fetchLatestRelease([this](std::optional<UpdateInfo> info) {
         if (info.has_value())
-            Q_EMIT releaseNotesFetched(*info);
+            Q_EMIT releaseNotesFetched(toVariantMap(*info));
         else
             Q_EMIT updateCheckFailed(QStringLiteral("Änderungsprotokoll konnte nicht geladen werden."));
     });
