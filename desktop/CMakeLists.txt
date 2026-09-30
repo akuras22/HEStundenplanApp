@@ -23,7 +23,7 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 set(QT_DEFAULT_MAJOR_VERSION 6)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network DBus)
 find_package(KF6 REQUIRED COMPONENTS
     CoreAddons
     Config
@@ -59,6 +59,8 @@ qt_add_executable(hestundenplan-desktop
     src/core/NotificationManager.cpp
     src/core/ReminderScheduler.h
     src/core/ReminderScheduler.cpp
+    src/core/DesktopStyle.h
+    src/core/DesktopStyle.cpp
     src/controller/TimetableController.h
     src/controller/TimetableController.cpp
 )
@@ -113,6 +115,7 @@ target_link_libraries(hestundenplan-desktop PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::Network
+    Qt6::DBus
     KF6::CoreAddons
     KF6::ConfigCore
     KF6::ConfigGui
