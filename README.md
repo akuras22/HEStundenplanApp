@@ -8,7 +8,7 @@ Es gibt zwei Apps in diesem Repository:
 | | Plattform | Verzeichnis | Technologie |
 |---|---|---|---|
 | 📱 **Android** | Android 8.0+ | [`app/`](app) | Kotlin, Jetpack Compose |
-| 🖥️ **Desktop** | Linux (optimiert für KDE Plasma, z. B. CachyOS) | [`desktop/`](desktop) | C++, Qt6/Kirigami |
+| 🖥️ **Desktop** | Linux (für KDE Plasma optimiert, z. B. CachyOS; läuft auch unter GNOME) | [`desktop/`](desktop) | C++, Qt6/Kirigami |
 
 Beide Apps sprechen dieselbe öffentliche QIS/LSF-Schnittstelle der Hochschule an und bieten den
 gleichen Funktionsumfang (Wochen-/Tagesansicht, Studiengang-Auswahl mit Favoriten, Suche,
@@ -23,7 +23,7 @@ Installation, siehe [CHANGELOG.md](CHANGELOG.md) für Details zum Update-Mechani
 
 Quellcode und Build-Anleitung: [`app/`](app), Standard-Gradle-Projekt (`./gradlew assembleDebug`).
 
-## Desktop (Linux / KDE Plasma)
+## Desktop (Linux)
 
 Native Qt6/Kirigami-App, siehe [`desktop/`](desktop) für den vollständigen Quellcode. Jeder Push
 auf `main` baut die App automatisch und veröffentlicht sie auf der
@@ -47,9 +47,13 @@ curl -LO https://raw.githubusercontent.com/akuras22/HEStundenplanApp/main/deskto
 makepkg -si
 ```
 
-**Andere Distributionen — aus dem Quellcode bauen:** benötigt Qt6 (Core, Gui, Qml, Quick,
-QuickControls2, Network), KDE Frameworks 6 (Kirigami, KConfig, KCoreAddons, KI18n, KNotifications,
-KDBusAddons), libxml2, sowie CMake, Ninja und extra-cmake-modules:
+**Andere Distributionen (auch GNOME) — aus dem Quellcode bauen:** benötigt Qt6 (Core, Gui, Qml,
+Quick, QuickControls2, Network), KDE Frameworks 6 (Kirigami, KConfig, KCoreAddons, KI18n,
+KNotifications, KDBusAddons), zusätzlich **qqc2-desktop-style** und das **Breeze-Icon-Theme**
+(beide zieht `kirigami` selbst nicht automatisch mit — ohne `qqc2-desktop-style` startet die App
+auf einem reinen GNOME-System gar nicht erst, da der erzwungene `org.kde.desktop`-Stil fehlt; ohne
+Breeze-Icons bleiben einige Symbolleisten-Icons unter Adwaita leer), libxml2, sowie CMake, Ninja
+und extra-cmake-modules:
 
 ```bash
 git clone https://github.com/akuras22/HEStundenplanApp.git
@@ -61,13 +65,24 @@ sudo cmake --install build
 
 Die App erscheint danach im Anwendungsmenü als "Stundenplan" (`hestundenplan-desktop`).
 
+### GNOME und andere Desktops
+
+Die App ist mit [Kirigami](https://develop.kde.org/frameworks/kirigami/) gebaut, das bewusst
+"konvergent" ist und außerhalb von KDE Plasma genauso läuft. Damit sie dabei nicht auf den kargen,
+generischen Qt-Standardstil zurückfällt, erzwingt sie explizit den `org.kde.desktop`-Stil (aus
+`qqc2-desktop-style`) — der ist trotz des Namens nicht Plasma-exklusiv, sondern für jeden
+Linux-Desktop gedacht. Zusammen mit dem Breeze-Icon-Theme sorgt das für ein konsistentes,
+KDE-artiges Erscheinungsbild sowohl unter Plasma als auch unter GNOME. Pacman zieht beide
+Pakete automatisch mit; bei anderen Paketmanagern ggf. manuell nachinstallieren
+(`qqc2-desktop-style` und `breeze-icons`/`breeze-icon-theme`).
+
 ### Bekannte Einschränkungen
 
 - Vorlesungs-Erinnerungen laufen nur, solange die App geöffnet ist (kein Hintergrunddienst wie
-  Androids WorkManager).
-- Theme (Hell/Dunkel) und Akzentfarbe lassen sich für die selbstgezeichneten Teile der Oberfläche
-  (Wochen-/Tagesumschalter, Heute-Markierung) anpassen; native KDE-Bedienelemente (Dialoge,
-  Checkboxen, Fensterrahmen) folgen bewusst immer dem System-Theme von Plasma.
+  Androids WorkManager, kein Systemtray-Icon zum Weiterlaufen im Hintergrund).
+- Theme (Hell/Dunkel) und Akzentfarbe folgen immer dem System — es gibt bewusst keine
+  App-eigene Override-Einstellung dafür (in früheren Versionen versucht, aber nie zuverlässig
+  über alle Bedienelemente hinweg wirksam).
 - Kein Pendant zum Android-Homescreen-Widget.
 
 ## Lizenz

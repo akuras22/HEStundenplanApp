@@ -4,12 +4,12 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Stundenplan</name>
-  <summary>Stundenplan der Hochschule Esslingen für KDE Plasma</summary>
+  <summary>Stundenplan der Hochschule Esslingen für Linux-Desktops</summary>
   <description>
     <p>
       Zeigt den live von der QIS/LSF-Seite der Hochschule Esslingen geladenen Stundenplan in
-      Wochen- und Tagesansicht, mit Suche, Vorlesungs-Erinnerungen und einer an KDE Breeze
-      angelehnten Optik.
+      Wochen- und Tagesansicht, mit Suche und Vorlesungs-Erinnerungen. Für KDE Plasma optimiert,
+      läuft dank Kirigami aber auch unter GNOME und anderen Linux-Desktops.
     </p>
   </description>
   <launchable type="desktop-id">org.hsesslingen.stundenplan.desktop.desktop</launchable>

@@ -12,10 +12,18 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 #include <QUrl>
 
 int main(int argc, char *argv[])
 {
+    // org.kde.desktop (from qqc2-desktop-style) isn't Plasma-exclusive — it's the KDE Frameworks
+    // style meant for any Linux desktop — but Qt Quick Controls only auto-selects it when the
+    // active platform theme reports itself as "kde", which is only true under a full Plasma
+    // session. Left to that auto-detection, a GNOME install would silently fall back to the bare
+    // "Basic" style instead, so it's set explicitly here for a consistent look everywhere.
+    QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
+
     QGuiApplication app(argc, argv);
     QGuiApplication::setOrganizationName(QStringLiteral("HS Esslingen"));
     QGuiApplication::setApplicationName(QStringLiteral("HEStundenplan"));

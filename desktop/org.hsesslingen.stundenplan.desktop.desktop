@@ -9,6 +9,6 @@ Comment[de]=Stundenplan der Hochschule Esslingen
 Exec=hestundenplan-desktop
 Icon=org.hsesslingen.stundenplan.desktop
 Terminal=false
-Categories=Education;Calendar;Qt;KDE;
+Categories=Education;Calendar;Qt;
 StartupNotify=true
 X-KDE-StartupNotify=true
