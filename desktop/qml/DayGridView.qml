@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
 import "components"
 
 // Single-day grid, swiped per weekday — same time-grid concept as WeekGridView but one wide
@@ -32,20 +33,36 @@ ColumnLayout {
         Layout.fillWidth: true
         Kirigami.Heading {
             level: 3
-            text: Qt.formatDate(root.currentDate, "dddd, d. MMMM yyyy")
+            // Not Qt.formatDate(): with a format string that one ignores the system locale and
+            // always writes English day/month names.
+            text: root.currentDate.toLocaleDateString(Qt.locale(), "dddd, d. MMMM yyyy")
         }
         Item { Layout.fillWidth: true }
         Kirigami.Chip {
-            visible: root.isToday
+            visible: root.isToday && !AppTheme.gnome
             text: qsTr("Heute")
             checkable: false
             closable: false
         }
+        // GNOME has no chip widget; a small accent-tinted pill label is its idiom for a tag.
+        Rectangle {
+            visible: root.isToday && AppTheme.gnome
+            implicitWidth: todayLabel.implicitWidth + 20
+            implicitHeight: todayLabel.implicitHeight + 8
+            radius: height / 2
+            color: Qt.rgba(AppTheme.accentColor.r, AppTheme.accentColor.g, AppTheme.accentColor.b, 0.2)
+            Controls.Label {
+                id: todayLabel
+                anchors.centerIn: parent
+                text: qsTr("Heute")
+                font.bold: true
+                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+            }
+        }
     }
 
-    Kirigami.InlineMessage {
+    Banner {
         id: countdownBanner
-        Layout.fillWidth: true
         type: Kirigami.MessageType.Positive
         visible: root.isToday && !!nextEvent.title
         text: nextEvent.title

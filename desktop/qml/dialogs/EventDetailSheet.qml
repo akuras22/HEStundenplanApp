@@ -2,17 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
+import "../components"
 
-Kirigami.OverlaySheet {
+AppSheet {
     id: root
 
     property var eventData: ({})
 
-    header: Kirigami.Heading {
-        text: root.eventData.title || ""
-        level: 2
-        wrapMode: Text.Wrap
-    }
+    title: root.eventData.title || ""
 
     ColumnLayout {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 20
@@ -77,7 +75,7 @@ Kirigami.OverlaySheet {
 
         Controls.Button {
             Layout.fillWidth: true
-            icon.name: "edit-copy"
+            icon.name: AppTheme.icon("edit-copy")
             text: qsTr("Teilen (in Zwischenablage kopieren)")
             onClicked: {
                 clipboardHelper.text = timetableController.shareTextFor(root.eventData)

@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
+import "../components"
 
-Kirigami.ScrollablePage {
+PrefPage {
     id: root
     title: qsTr("Einstellungen")
 
@@ -12,19 +14,27 @@ Kirigami.ScrollablePage {
     Component { id: appearancePage; AppearancePage {} }
     Component { id: aboutPage; AboutPage {} }
 
-    ListView {
-        model: [
-            { title: qsTr("Studiengänge"), icon: "view-calendar-list", page: studiengaengePage },
-            { title: qsTr("Benachrichtigungen"), icon: "notifications", page: notificationsPage },
-            { title: qsTr("Darstellung"), icon: "preferences-desktop-theme", page: appearancePage },
-            { title: qsTr("Über die App"), icon: "help-about", page: aboutPage },
-        ]
-        delegate: Controls.ItemDelegate {
-            required property var modelData
-            width: ListView.view.width
-            text: modelData.title
-            icon.name: modelData.icon
-            onClicked: applicationWindow().pageStack.push(modelData.page)
+    PrefGroup {
+        Repeater {
+            model: [
+                { title: qsTr("Studiengänge"), icon: "view-calendar-list", page: studiengaengePage },
+                { title: qsTr("Benachrichtigungen"), icon: "notifications", page: notificationsPage },
+                { title: qsTr("Darstellung"), icon: "preferences-desktop-theme", page: appearancePage },
+                { title: qsTr("Über die App"), icon: "help-about", page: aboutPage },
+            ]
+            delegate: PrefRow {
+                required property var modelData
+                required property int index
+                // Inside a Repeater the Repeater itself counts among the parent's children, so
+                // say explicitly where the row sits.
+                first: index === 0
+                last: index === 3
+                text: modelData.title
+                icon.name: AppTheme.icon(modelData.icon)
+                activatable: true
+                navigates: true
+                onClicked: applicationWindow().pageStack.push(modelData.page)
+            }
         }
     }
 }

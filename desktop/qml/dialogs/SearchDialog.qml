@@ -2,16 +2,19 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
+import "../components"
 
-Kirigami.OverlaySheet {
+AppSheet {
     id: root
 
     signal eventSelected(var eventData)
 
-    header: Kirigami.Heading {
-        text: qsTr("Suche")
-        level: 2
-    }
+    // On every opening, not just once at creation — the sheet is created with the page, long
+    // before it is first shown.
+    onOpened: queryField.forceActiveFocus()
+
+    title: qsTr("Suche")
 
     ColumnLayout {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 22
@@ -22,7 +25,6 @@ Kirigami.OverlaySheet {
             Layout.fillWidth: true
             placeholderText: qsTr("Raum oder Dozent…")
             onTextChanged: resultsModel.refresh()
-            Component.onCompleted: forceActiveFocus()
         }
 
         QtObject {

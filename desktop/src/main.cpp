@@ -13,16 +13,20 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QtQml>
 #include <QUrl>
 
 int main(int argc, char *argv[])
 {
-    // See DesktopStyle.h: org.kde.desktop under Plasma, Fusion (recolored below) under GNOME —
-    // QQuickStyle::setStyle() must run before QGuiApplication exists.
+    // See DesktopStyle.h: org.kde.desktop under Plasma, our own Adwaita-shaped style everywhere
+    // else — QQuickStyle::setStyle() must run before QGuiApplication exists.
     stundenplan::DesktopStyle::selectQuickControlsStyle();
 
     QGuiApplication app(argc, argv);
-    stundenplan::DesktopStyle::applyGnomePalette();
+    // Must exist before the QML engine loads anything: both the app's QML and the Adwaita style
+    // import it as the DesktopStyle singleton.
+    auto *desktopStyle = new stundenplan::DesktopStyle(&app);
+    qmlRegisterSingletonInstance("de.hsesslingen.stundenplan.platform", 1, 0, "DesktopStyle", desktopStyle);
     QGuiApplication::setOrganizationName(QStringLiteral("HS Esslingen"));
     QGuiApplication::setApplicationName(QStringLiteral("HEStundenplan"));
     QGuiApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("org.hsesslingen.stundenplan.desktop")));
@@ -36,6 +40,10 @@ int main(int argc, char *argv[])
                           KAboutLicense::GPL_V3,
                           i18n("© 2026 HS Esslingen Stundenplan"));
     aboutData.setHomepage(QStringLiteral("https://github.com/akuras22/HEStundenplanApp"));
+    // Must match the installed .desktop file's name — it becomes the window's Wayland app id,
+    // which is how GNOME Shell and Plasma's task manager find the app's icon and launcher entry.
+    // (KAboutData's default would be "org.kde.hestundenplan-desktop".)
+    aboutData.setDesktopFileName(QStringLiteral("org.hsesslingen.stundenplan.desktop"));
     KAboutData::setApplicationData(aboutData);
 
     using namespace stundenplan;

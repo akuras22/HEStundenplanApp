@@ -12,11 +12,19 @@ Kirigami.Page {
 
     title: timetableController.selectedStudiengang.code || qsTr("Stundenplan")
     padding: Kirigami.Units.smallSpacing
+    topPadding: AppTheme.gnome ? 0 : Kirigami.Units.smallSpacing
 
     // Tappable title with a dropdown to quickly switch between starred Studiengänge — only
     // worth showing once there's actually a choice to make (matches the Android app, which also
     // only shows this when the user has more than one favorite).
-    titleDelegate: favoriteSwitcherComponent
+    // KDE look: Kirigami's toolbar shows it via titleDelegate. GNOME look: our HeaderBar picks it
+    // up as headerBarTitle instead — titleDelegate must stay untouched there, or Kirigami would
+    // put the delegate in a strip of its own above the page now that its toolbar is off.
+    readonly property Component headerBarTitle: favoriteSwitcherComponent
+    Component.onCompleted: {
+        if (!AppTheme.gnome)
+            titleDelegate = favoriteSwitcherComponent
+    }
 
     Component {
         id: favoriteSwitcherComponent
@@ -26,14 +34,21 @@ Kirigami.Page {
             text: root.title
             font.bold: true
             font.pointSize: Kirigami.Theme.defaultFont.pointSize * 1.15
-            icon.name: favorites.length > 1 ? "arrow-down" : ""
+            icon.name: favorites.length > 1 ? AppTheme.icon("arrow-down") : ""
             display: Controls.AbstractButton.TextBesideIcon
-            LayoutMirroring.enabled: false
+            // GNOME puts the drop-down arrow after the title.
+            LayoutMirroring.enabled: AppTheme.gnome
             enabled: favorites.length > 1
+            // With nothing to switch to it is just the title — don't let a style dim it as disabled.
+            opacity: 1
             onClicked: favoriteMenu.open()
 
             Controls.Menu {
                 id: favoriteMenu
+                // Drops down below the title rather than covering it; GNOME centers its
+                // popovers on the button they belong to.
+                x: AppTheme.gnome ? Math.round((titleButton.width - width) / 2) : 0
+                y: titleButton.height + (AppTheme.gnome ? 6 : 0)
                 Repeater {
                     model: titleButton.favorites
                     delegate: Controls.MenuItem {
@@ -101,25 +116,25 @@ Kirigami.Page {
 
     actions: [
         Kirigami.Action {
-            icon.name: "search"
+            icon.name: AppTheme.icon("search")
             text: qsTr("Suche")
             enabled: !!timetableController.selectedStudiengang.code
             onTriggered: searchSheet.open()
         },
         Kirigami.Action {
-            icon.name: "go-jump-today"
+            icon.name: AppTheme.icon("go-jump-today")
             text: qsTr("Heute")
             enabled: !!timetableController.selectedStudiengang.code
             onTriggered: root.goToday()
         },
         Kirigami.Action {
-            icon.name: "view-refresh"
+            icon.name: AppTheme.icon("view-refresh")
             text: qsTr("Aktualisieren")
             enabled: !!timetableController.selectedStudiengang.code
             onTriggered: timetableController.refresh()
         },
         Kirigami.Action {
-            icon.name: "configure"
+            icon.name: AppTheme.icon("configure")
             text: qsTr("Einstellungen")
             onTriggered: applicationWindow().pageStack.push(settingsHubComponent)
         }
@@ -136,16 +151,14 @@ Kirigami.Page {
 
         OfflineBanner {}
 
-        Kirigami.InlineMessage {
-            Layout.fillWidth: true
+        Banner {
             type: Kirigami.MessageType.Error
             visible: !!timetableController.errorMessage
             text: timetableController.errorMessage
         }
 
-        Kirigami.InlineMessage {
+        Banner {
             id: emptyWeekMessage
-            Layout.fillWidth: true
             type: Kirigami.MessageType.Information
             // Shown once a fetch actually succeeded but this specific week has no events —
             // e.g. semester break or before the term starts — so an empty grid doesn't read as
@@ -162,7 +175,7 @@ Kirigami.Page {
             visible: !timetableController.selectedStudiengang.code
             Layout.fillWidth: true
             Layout.fillHeight: true
-            icon.name: "view-calendar-week"
+            icon.name: AppTheme.gnome ? "x-office-calendar-symbolic" : "view-calendar-week"
             text: qsTr("Kein Studiengang ausgewählt")
             explanation: qsTr("Wähle in den Einstellungen einen Studiengang aus, um deinen Stundenplan zu sehen.")
             helpfulAction: Kirigami.Action {
@@ -177,16 +190,24 @@ Kirigami.Page {
             Layout.fillHeight: true
             spacing: Kirigami.Units.smallSpacing
 
+            // KDE look: the switcher spans the full width. GNOME look: a compact toggle group,
+            // centered, with the previous/next arrows right next to it.
             RowLayout {
                 Layout.fillWidth: true
 
+                Item {
+                    visible: AppTheme.gnome
+                    Layout.fillWidth: true
+                }
+
                 Controls.ToolButton {
-                    icon.name: "go-previous"
+                    icon.name: AppTheme.icon("go-previous")
                     onClicked: root.dayView ? root.stepDay(-1) : root.stepWeek(-1)
                 }
 
                 SegmentedSwitch {
-                    Layout.fillWidth: true
+                    Layout.fillWidth: !AppTheme.gnome
+                    Layout.preferredWidth: AppTheme.gnome ? Kirigami.Units.gridUnit * 14 : -1
                     currentIndex: root.dayView ? 1 : 0
                     model: [
                         { text: qsTr("Woche"), icon: "view-calendar-week" },
@@ -196,8 +217,13 @@ Kirigami.Page {
                 }
 
                 Controls.ToolButton {
-                    icon.name: "go-next"
+                    icon.name: AppTheme.icon("go-next")
                     onClicked: root.dayView ? root.stepDay(1) : root.stepWeek(1)
+                }
+
+                Item {
+                    visible: AppTheme.gnome
+                    Layout.fillWidth: true
                 }
             }
 

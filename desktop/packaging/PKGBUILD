@@ -2,7 +2,7 @@
 pkgname=hestundenplan-desktop
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Stundenplan der Hochschule Esslingen für Linux (KDE Plasma, GNOME und andere)"
+pkgdesc="Stundenplan der Hochschule Esslingen für Linux (GNOME, KDE Plasma und andere)"
 arch=('x86_64')
 url="https://github.com/akuras22/HEStundenplanApp"
 license=('GPL3')
@@ -12,13 +12,15 @@ license=('GPL3')
 options=('!debug')
 depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'kirigami' 'kconfig' 'kcoreaddons' 'ki18n'
          'knotifications' 'kdbusaddons' 'libxml2'
-         # kirigami itself doesn't pull either of these in, but we need both explicitly to look
-         # right outside a full Plasma install (e.g. plain GNOME):
-         # - breeze-icons: several toolbar/nav icon names (view-calendar-day, go-jump-today,
-         #   configure, documentinfo, ...) only exist in Breeze, not Adwaita.
-         # - qqc2-desktop-style: provides the "org.kde.desktop" QQC2 style we force in main.cpp;
-         #   without this package present the app would fail to start at all.
-         'breeze-icons' 'qqc2-desktop-style')
+         # The app has two looks (see src/core/DesktopStyle.h) and each needs an icon theme, and
+         # the KDE one a style, that kirigami itself doesn't pull in:
+         # - adwaita-icon-theme: every icon of the GNOME look (the default outside Plasma) is one
+         #   of Adwaita's "-symbolic" icons.
+         # - breeze-icons: the KDE look's toolbar/nav icon names (view-calendar-day,
+         #   go-jump-today, configure, documentinfo, ...) only exist in Breeze.
+         # - qqc2-desktop-style: provides the "org.kde.desktop" QQC2 style the KDE look selects;
+         #   without this package present the app would fail to start under Plasma.
+         'adwaita-icon-theme' 'breeze-icons' 'qqc2-desktop-style')
 makedepends=('cmake' 'ninja' 'extra-cmake-modules' 'git')
 source=("git+${url}.git")
 sha256sums=('SKIP')

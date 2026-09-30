@@ -81,7 +81,7 @@ jobs:
             cmake ninja extra-cmake-modules git \
             qt6-base qt6-declarative qt6-svg \
             kirigami kconfig kcoreaddons ki18n knotifications kdbusaddons \
-            libxml2 breeze-icons qqc2-desktop-style
+            libxml2 adwaita-icon-theme breeze-icons qqc2-desktop-style
 
       - uses: actions/checkout@v4
         with:

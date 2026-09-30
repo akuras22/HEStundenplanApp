@@ -2,9 +2,11 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
+import "../components"
 import "../dialogs"
 
-Kirigami.ScrollablePage {
+PrefPage {
     id: root
     title: qsTr("Über die App")
 
@@ -47,61 +49,70 @@ Kirigami.ScrollablePage {
     }
 
     ColumnLayout {
-        width: root.width
-        spacing: Kirigami.Units.largeSpacing
+        Layout.fillWidth: true
+        Layout.topMargin: Kirigami.Units.largeSpacing
+        spacing: Kirigami.Units.smallSpacing
 
-        RowLayout {
-            Layout.fillWidth: true
-            Kirigami.Icon {
-                source: "org.hsesslingen.stundenplan.desktop"
-                Layout.preferredWidth: Kirigami.Units.iconSizes.huge
-                Layout.preferredHeight: Kirigami.Units.iconSizes.huge
-            }
-            ColumnLayout {
-                Kirigami.Heading {
-                    text: qsTr("HS Esslingen Stundenplan")
-                    level: 2
-                }
-                Controls.Label {
-                    text: qsTr("Version %1 (Desktop)").arg(updateManager.appVersionName)
-                    color: Kirigami.Theme.disabledTextColor
-                }
-            }
+        Kirigami.Icon {
+            source: "org.hsesslingen.stundenplan.desktop"
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: Kirigami.Units.iconSizes.enormous
+            Layout.preferredHeight: Kirigami.Units.iconSizes.enormous
         }
-
-        Kirigami.InlineMessage {
-            id: statusMessage
+        Kirigami.Heading {
             Layout.fillWidth: true
-            visible: false
-            type: Kirigami.MessageType.Warning
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("HS Esslingen Stundenplan")
+            level: 1
+            font.weight: Font.Bold
+            wrapMode: Text.Wrap
         }
-
-        Controls.Button {
+        Controls.Label {
             Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("Version %1 (Desktop)").arg(updateManager.appVersionName)
+            color: AppTheme.disabledTextColor
+        }
+    }
+
+    Banner {
+        id: statusMessage
+        visible: false
+        type: Kirigami.MessageType.Warning
+    }
+
+    PrefGroup {
+        PrefRow {
             text: qsTr("Nach Updates suchen")
-            icon.name: "system-software-update"
+            icon.name: AppTheme.icon("system-software-update")
+            activatable: true
             onClicked: updateManager.checkForUpdate()
         }
-        Controls.Button {
-            Layout.fillWidth: true
+        PrefRow {
             text: qsTr("Änderungsprotokoll")
-            icon.name: "documentinfo"
+            icon.name: AppTheme.icon("documentinfo")
+            activatable: true
             onClicked: updateManager.fetchLatestReleaseNotes()
         }
-        Controls.Button {
-            Layout.fillWidth: true
+        PrefRow {
+            text: qsTr("Quellcode")
+            icon.name: AppTheme.icon("internet-web-browser")
+            activatable: true
+            navigates: true
+            onClicked: updateManager.openReleasePage("https://github.com/akuras22/HEStundenplanApp")
+        }
+    }
+
+    PrefGroup {
+        PrefRow {
             text: qsTr("Zwischenspeicher leeren")
-            icon.name: "edit-clear-all"
+            subtitle: qsTr("Gespeicherte Stundenpläne entfernen; sie werden beim nächsten Öffnen neu geladen")
+            icon.name: AppTheme.icon("edit-clear-all")
+            activatable: true
             onClicked: {
                 timetableController.clearCache()
                 root.showStatus(qsTr("Zwischenspeicher geleert."), Kirigami.MessageType.Positive)
             }
-        }
-        Controls.Button {
-            Layout.fillWidth: true
-            text: qsTr("Quellcode")
-            icon.name: "internet-web-browser"
-            onClicked: updateManager.openReleasePage("https://github.com/akuras22/HEStundenplanApp")
         }
     }
 }

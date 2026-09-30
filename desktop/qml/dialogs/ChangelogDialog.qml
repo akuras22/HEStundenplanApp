@@ -2,16 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
+import "../components"
 
-Kirigami.OverlaySheet {
+AppSheet {
     id: root
 
     property var releaseInfo: ({})
 
-    header: Kirigami.Heading {
-        text: qsTr("Änderungsprotokoll")
-        level: 2
-    }
+    title: qsTr("Änderungsprotokoll")
 
     ColumnLayout {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 22

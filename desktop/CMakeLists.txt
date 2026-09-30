@@ -23,7 +23,8 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 set(QT_DEFAULT_MAJOR_VERSION 6)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network DBus)
+# 6.7: per-corner Rectangle radii and the Shape curve renderer, both used by the GNOME look.
+find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network DBus)
 find_package(KF6 REQUIRED COMPONENTS
     CoreAddons
     Config
@@ -33,7 +34,7 @@ find_package(KF6 REQUIRED COMPONENTS
 )
 find_package(LibXml2 REQUIRED)
 
-qt_standard_project_setup(REQUIRES 6.5)
+qt_standard_project_setup(REQUIRES 6.7)
 
 qt_add_executable(hestundenplan-desktop
     src/main.cpp
@@ -70,6 +71,9 @@ set_source_files_properties(qml/components/AppTheme.qml PROPERTIES QT_QML_SINGLE
 qt_add_qml_module(hestundenplan-desktop
     URI de.hsesslingen.stundenplan.desktop
     VERSION 1.0
+    # Linking the (static, plugin-less) Adwaita style module below would otherwise make Qt scan
+    # for QML plugins to link statically and warn about every Kirigami one it cannot.
+    NO_IMPORT_SCAN
     QML_FILES
         qml/Main.qml
         qml/PlanPage.qml
@@ -81,6 +85,13 @@ qt_add_qml_module(hestundenplan-desktop
         qml/components/OfflineBanner.qml
         qml/components/AppTheme.qml
         qml/components/SegmentedSwitch.qml
+        qml/components/HeaderBar.qml
+        qml/components/Banner.qml
+        qml/components/PrefPage.qml
+        qml/components/PrefGroup.qml
+        qml/components/PrefRow.qml
+        qml/components/AppSheet.qml
+        qml/components/WindowFrame.qml
         qml/dialogs/EventDetailSheet.qml
         qml/dialogs/SearchDialog.qml
         qml/dialogs/UpdateDialog.qml
@@ -92,6 +103,44 @@ qt_add_qml_module(hestundenplan-desktop
         qml/settings/AboutPage.qml
     RESOURCES
         icons/org.hsesslingen.stundenplan.desktop.svg
+)
+
+# The GNOME look's Qt Quick Controls style (see DesktopStyle.h): a plain QML module compiled into
+# the binary and selected by name through QQuickStyle. Its files are aliased to the module root so
+# they sit next to the generated qmldir and see each other (and the Adw singleton) without imports.
+set(ADWAITA_STYLE_QML
+    qml/adwaita/Adw.qml
+    qml/adwaita/ButtonContent.qml
+    qml/adwaita/FocusRing.qml
+    qml/adwaita/BusyIndicator.qml
+    qml/adwaita/Button.qml
+    qml/adwaita/CheckBox.qml
+    qml/adwaita/ItemDelegate.qml
+    qml/adwaita/Label.qml
+    qml/adwaita/Menu.qml
+    qml/adwaita/MenuItem.qml
+    qml/adwaita/MenuSeparator.qml
+    qml/adwaita/RadioButton.qml
+    qml/adwaita/ScrollBar.qml
+    qml/adwaita/ScrollView.qml
+    qml/adwaita/SpinBox.qml
+    qml/adwaita/Switch.qml
+    qml/adwaita/TextField.qml
+    qml/adwaita/ToolButton.qml
+    qml/adwaita/ToolTip.qml
+)
+foreach(qml_file IN LISTS ADWAITA_STYLE_QML)
+    get_filename_component(qml_name ${qml_file} NAME)
+    set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${qml_name})
+endforeach()
+set_source_files_properties(qml/adwaita/Adw.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
+qt_add_qml_module(hestundenplan-adwaita-style STATIC
+    URI de.hsesslingen.stundenplan.adwaita
+    VERSION 1.0
+    NO_PLUGIN
+    OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/de/hsesslingen/stundenplan/adwaita
+    QML_FILES ${ADWAITA_STYLE_QML}
 )
 
 target_include_directories(hestundenplan-desktop PRIVATE
@@ -109,6 +158,7 @@ target_compile_definitions(hestundenplan-desktop PRIVATE
 )
 
 target_link_libraries(hestundenplan-desktop PRIVATE
+    hestundenplan-adwaita-style
     Qt6::Core
     Qt6::Gui
     Qt6::Qml

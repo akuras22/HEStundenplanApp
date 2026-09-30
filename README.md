@@ -8,7 +8,7 @@ Es gibt zwei Apps in diesem Repository:
 | | Plattform | Verzeichnis | Technologie |
 |---|---|---|---|
 | 📱 **Android** | Android 8.0+ | [`app/`](app) | Kotlin, Jetpack Compose |
-| 🖥️ **Desktop** | Linux (für KDE Plasma optimiert, z. B. CachyOS; läuft auch unter GNOME) | [`desktop/`](desktop) | C++, Qt6/Kirigami |
+| 🖥️ **Desktop** | Linux (GNOME-Look als Standard, KDE-Look unter KDE Plasma) | [`desktop/`](desktop) | C++, Qt6/Kirigami |
 
 Beide Apps sprechen dieselbe öffentliche QIS/LSF-Schnittstelle der Hochschule an und bieten den
 gleichen Funktionsumfang (Wochen-/Tagesansicht, Studiengang-Auswahl mit Favoriten, Suche,
@@ -47,13 +47,13 @@ curl -LO https://raw.githubusercontent.com/akuras22/HEStundenplanApp/main/deskto
 makepkg -si
 ```
 
-**Andere Distributionen (auch GNOME) — aus dem Quellcode bauen:** benötigt Qt6 (Core, Gui, Qml,
-Quick, QuickControls2, Network), KDE Frameworks 6 (Kirigami, KConfig, KCoreAddons, KI18n,
-KNotifications, KDBusAddons), zusätzlich **qqc2-desktop-style** und das **Breeze-Icon-Theme**
-(beide zieht `kirigami` selbst nicht automatisch mit — ohne `qqc2-desktop-style` startet die App
-auf einem reinen GNOME-System gar nicht erst, da der erzwungene `org.kde.desktop`-Stil fehlt; ohne
-Breeze-Icons bleiben einige Symbolleisten-Icons unter Adwaita leer), libxml2, sowie CMake, Ninja
-und extra-cmake-modules:
+**Andere Distributionen — aus dem Quellcode bauen:** benötigt Qt6 ab 6.7 (Core, Gui, Qml, Quick,
+QuickControls2, Network, DBus, Svg), KDE Frameworks 6 (Kirigami, KConfig, KCoreAddons, KI18n,
+KNotifications, KDBusAddons), libxml2, sowie CMake, Ninja und extra-cmake-modules. Dazu je nach
+Desktop (siehe [Zwei Looks](#zwei-looks-gnome-und-kde)): für den GNOME-Look das
+**Adwaita-Icon-Theme**, für den KDE-Look **qqc2-desktop-style** und das **Breeze-Icon-Theme**
+(`kirigami` zieht keines davon automatisch mit — ohne `qqc2-desktop-style` startet die App unter
+Plasma nicht, ohne das jeweilige Icon-Theme bleiben Symbole leer):
 
 ```bash
 git clone https://github.com/akuras22/HEStundenplanApp.git
@@ -65,16 +65,23 @@ sudo cmake --install build
 
 Die App erscheint danach im Anwendungsmenü als "Stundenplan" (`hestundenplan-desktop`).
 
-### GNOME und andere Desktops
+### Zwei Looks: GNOME und KDE
 
-Die App ist mit [Kirigami](https://develop.kde.org/frameworks/kirigami/) gebaut, das bewusst
-"konvergent" ist und außerhalb von KDE Plasma genauso läuft. Damit sie dabei nicht auf den kargen,
-generischen Qt-Standardstil zurückfällt, erzwingt sie explizit den `org.kde.desktop`-Stil (aus
-`qqc2-desktop-style`) — der ist trotz des Namens nicht Plasma-exklusiv, sondern für jeden
-Linux-Desktop gedacht. Zusammen mit dem Breeze-Icon-Theme sorgt das für ein konsistentes,
-KDE-artiges Erscheinungsbild sowohl unter Plasma als auch unter GNOME. Pacman zieht beide
-Pakete automatisch mit; bei anderen Paketmanagern ggf. manuell nachinstallieren
-(`qqc2-desktop-style` und `breeze-icons`/`breeze-icon-theme`).
+Die App erkennt beim Start, auf welchem Desktop sie läuft, und sieht entsprechend aus:
+
+- **GNOME-Look (Standard)** — unter GNOME und jedem anderen Desktop außer Plasma. Eigene
+  Kopfleiste mit Fensterknöpfen statt Titelleiste, abgerundete Fensterecken, Bedienelemente,
+  Farben und Maße nach libadwaita-Vorbild, Adwaita-Symbole, Einstellungen als "Boxed Lists".
+  Hell/Dunkel, Akzentfarbe und die Anordnung der Fensterknöpfe folgen live den
+  GNOME-Einstellungen. Technisch ist das kein GTK: ein eigener Qt-Quick-Controls-Stil
+  ([`desktop/qml/adwaita`](desktop/qml/adwaita)) zeichnet die Adwaita-Formen nach.
+- **KDE-Look** — unter KDE Plasma. Breeze-Bedienelemente über den `org.kde.desktop`-Stil
+  (`qqc2-desktop-style`), Kirigami-Werkzeugleiste, normale KWin-Titelleiste, Farbschema und
+  Akzentfarbe von Plasma, Breeze-Symbole.
+
+Zum Ausprobieren lässt sich die Erkennung übersteuern: `HESTUNDENPLAN_LOOK=kde` bzw.
+`HESTUNDENPLAN_LOOK=gnome` erzwingt einen Look, `HESTUNDENPLAN_CSD=0` behält im GNOME-Look die
+Titelleiste des Fenstermanagers statt der eigenen Fensterknöpfe.
 
 ### Bekannte Einschränkungen
 
@@ -83,6 +90,9 @@ Pakete automatisch mit; bei anderen Paketmanagern ggf. manuell nachinstallieren
 - Theme (Hell/Dunkel) und Akzentfarbe folgen immer dem System — es gibt bewusst keine
   App-eigene Override-Einstellung dafür (in früheren Versionen versucht, aber nie zuverlässig
   über alle Bedienelemente hinweg wirksam).
+- Im GNOME-Look hat das Fenster keinen Schlagschatten: den zeichnen GTK-Apps selbst in einen
+  unsichtbaren Rand um das Fenster, wofür Qt keine Schnittstelle anbietet. Stattdessen umgibt
+  das Fenster eine feine Randlinie.
 - Kein Pendant zum Android-Homescreen-Widget.
 
 ## Lizenz

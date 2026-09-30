@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
+import "../components"
 
-Kirigami.ScrollablePage {
+PrefPage {
     id: root
     title: qsTr("Benachrichtigungen")
 
@@ -26,29 +28,27 @@ Kirigami.ScrollablePage {
         settingsStore.reminderLeadMinutes = Array.from(current)
     }
 
-    ColumnLayout {
-        width: root.width
-        spacing: Kirigami.Units.largeSpacing
-
-        Kirigami.FormLayout {
-            Layout.fillWidth: true
+    PrefGroup {
+        PrefRow {
+            text: qsTr("Erinnerungen aktivieren")
+            subtitle: qsTr("Vor Beginn einer Veranstaltung benachrichtigen")
+            activatable: true
+            onClicked: settingsStore.remindersEnabled = !settingsStore.remindersEnabled
 
             Controls.Switch {
-                Kirigami.FormData.label: qsTr("Erinnerungen aktivieren")
                 checked: settingsStore.remindersEnabled
                 onToggled: settingsStore.remindersEnabled = checked
             }
         }
+    }
 
-        Kirigami.Heading {
-            level: 4
-            text: qsTr("Vorlauf")
-            visible: settingsStore.remindersEnabled
-        }
+    PrefGroup {
+        title: qsTr("Vorlauf")
+        visible: settingsStore.remindersEnabled
 
         Flow {
             Layout.fillWidth: true
-            visible: settingsStore.remindersEnabled
+            Layout.margins: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.smallSpacing
 
             Repeater {
@@ -69,26 +69,27 @@ Kirigami.ScrollablePage {
             }
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            visible: settingsStore.remindersEnabled
-            spacing: Kirigami.Units.smallSpacing
+        Repeater {
+            model: root.customLeadMinutes
+            delegate: PrefRow {
+                required property int modelData
+                first: false
+                last: false
+                text: qsTr("%1 Min.").arg(modelData)
 
-            Repeater {
-                model: root.customLeadMinutes
-                delegate: Kirigami.Chip {
-                    required property int modelData
-                    text: qsTr("%1 Min.").arg(modelData)
-                    closable: true
-                    onRemoved: root.removeLead(modelData)
+                Controls.ToolButton {
+                    icon.name: AppTheme.gnome ? "user-trash-symbolic" : "edit-delete"
+                    onClicked: root.removeLead(modelData)
+                    Controls.ToolTip.text: qsTr("Entfernen")
+                    Controls.ToolTip.visible: hovered
                 }
             }
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            visible: settingsStore.remindersEnabled
-            spacing: Kirigami.Units.smallSpacing
+        PrefRow {
+            first: false
+            last: true
+            text: qsTr("Eigener Vorlauf (Minuten)")
 
             Controls.SpinBox {
                 id: customMinutesSpinBox
@@ -98,16 +99,19 @@ Kirigami.ScrollablePage {
                 editable: true
             }
             Controls.Button {
-                text: qsTr("Eigenen Vorlauf hinzufügen")
-                icon.name: "list-add"
+                text: qsTr("Hinzufügen")
                 onClicked: root.addCustomLead(customMinutesSpinBox.value)
             }
         }
+    }
 
-        Controls.Button {
-            visible: settingsStore.remindersEnabled
+    PrefGroup {
+        visible: settingsStore.remindersEnabled
+
+        PrefRow {
             text: qsTr("Test-Benachrichtigung senden")
-            icon.name: "notifications"
+            icon.name: AppTheme.icon("notifications")
+            activatable: true
             onClicked: notificationManager.notifyTest()
         }
     }

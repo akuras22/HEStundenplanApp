@@ -1,27 +1,76 @@
 #pragma once
 
-namespace stundenplan::DesktopStyle {
+#include <QColor>
+#include <QDBusVariant>
+#include <QObject>
+#include <QStringList>
 
-/** True when running under a GNOME session (XDG_CURRENT_DESKTOP/DESKTOP_SESSION). */
-bool isGnomeSession();
-
-/**
- * Call before constructing QGuiApplication (QQuickStyle::setStyle's documented requirement).
- * org.kde.desktop (Breeze-shaped widgets) everywhere except GNOME, where there is no equivalent
- * "native GTK-shaped" QQC2 style in the Qt/KDE ecosystem — Fusion is used instead as the closest
- * flat, non-KDE-looking built-in style, recolored by applyGnomePalette() below.
- */
-void selectQuickControlsStyle();
+namespace stundenplan {
 
 /**
- * Call after QGuiApplication is constructed (needs the D-Bus session bus) and before creating any
- * window. No-op outside GNOME — under GNOME, builds a QPalette approximating Adwaita's own colors
- * (querying the XDG desktop portal for the user's light/dark preference) and applies it globally,
- * so Fusion-rendered controls (Button, CheckBox, ComboBox, ...) pick up GNOME-appropriate colors
- * instead of Qt's generic default gray. This does not reproduce Adwaita's actual widget shapes
- * (rounded buttons, switch style, ...) — that would need a full GTK4/libadwaita rewrite — but it
- * stops the app looking like a stray KDE window color-wise.
+ * Decides which of the app's two looks is used and feeds the GNOME one with live system settings.
+ *
+ * - KDE look: only under a Plasma session. The org.kde.desktop QQC2 style (Breeze-shaped widgets,
+ *   Plasma's own palette and accent), Kirigami's toolbar, server-side window decoration.
+ * - GNOME look: everywhere else, so it is the default. Our own Adwaita-shaped QQC2 style
+ *   (qml/adwaita), an Adwaita QPalette, and a client-side header bar with window buttons like a
+ *   libadwaita app — there is no GTK in here, it is all drawn in QML.
+ *
+ * Exposed to QML as the DesktopStyle singleton (module de.hsesslingen.stundenplan.platform).
+ * dark/accentColor/windowButtons* are only meaningful for the GNOME look; under KDE the QML side
+ * reads everything from Kirigami.Theme instead.
  */
-void applyGnomePalette();
+class DesktopStyle : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool gnome READ isGnomeLook CONSTANT)
+    Q_PROPERTY(bool clientSideDecorations READ clientSideDecorations CONSTANT)
+    Q_PROPERTY(bool dark READ isDark NOTIFY darkChanged)
+    Q_PROPERTY(QColor accentColor READ accentColor NOTIFY accentColorChanged)
+    Q_PROPERTY(QStringList windowButtonsLeft READ windowButtonsLeft NOTIFY windowButtonsChanged)
+    Q_PROPERTY(QStringList windowButtonsRight READ windowButtonsRight NOTIFY windowButtonsChanged)
 
-} // namespace stundenplan::DesktopStyle
+public:
+    /**
+     * True unless running under KDE Plasma (XDG_CURRENT_DESKTOP/KDE_FULL_SESSION), so GNOME,
+     * and any desktop we do not know, get the GNOME look. HESTUNDENPLAN_LOOK=kde|gnome overrides
+     * the detection, mainly for testing one look from inside the other desktop.
+     */
+    static bool isGnomeLook();
+
+    /** Call before constructing QGuiApplication (QQuickStyle::setStyle's documented requirement). */
+    static void selectQuickControlsStyle();
+
+    /** Construct after QGuiApplication (needs the D-Bus session bus) and before any window. */
+    explicit DesktopStyle(QObject *parent = nullptr);
+
+    /** False with HESTUNDENPLAN_CSD=0, which keeps the window manager's own title bar. */
+    bool clientSideDecorations() const;
+    bool isDark() const { return m_dark; }
+    QColor accentColor() const { return m_accentColor; }
+    /** Window buttons ("minimize", "maximize", "close") per GNOME's button-layout setting. */
+    QStringList windowButtonsLeft() const { return m_buttonsLeft; }
+    QStringList windowButtonsRight() const { return m_buttonsRight; }
+
+Q_SIGNALS:
+    void darkChanged();
+    void accentColorChanged();
+    void windowButtonsChanged();
+
+private Q_SLOTS:
+    void onPortalSettingChanged(const QString &group, const QString &key, const QDBusVariant &value);
+
+private:
+    void setDark(bool dark);
+    void setAccentColor(const QVariant &portalValue);
+    void setButtonLayout(const QString &layout);
+    void applyAdwaitaPalette();
+
+    bool m_dark = false;
+    bool m_darkFromPortal = false;
+    QColor m_accentColor;
+    QStringList m_buttonsLeft;
+    QStringList m_buttonsRight;
+};
+
+} // namespace stundenplan

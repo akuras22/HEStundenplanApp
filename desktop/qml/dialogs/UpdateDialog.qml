@@ -2,17 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
 import org.kde.kirigami as Kirigami
+import de.hsesslingen.stundenplan.desktop
+import "../components"
 
-Kirigami.OverlaySheet {
+AppSheet {
     id: root
 
     property var updateInfo: ({})
 
-    header: Kirigami.Heading {
-        text: qsTr("Update verfügbar: %1").arg(root.updateInfo.versionName || "")
-        level: 2
-        wrapMode: Text.Wrap
-    }
+    title: qsTr("Update verfügbar: %1").arg(root.updateInfo.versionName || "")
 
     ColumnLayout {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 22
@@ -36,7 +34,7 @@ Kirigami.OverlaySheet {
         Controls.Button {
             Layout.fillWidth: true
             text: qsTr("Release-Seite öffnen")
-            icon.name: "internet-web-browser"
+            icon.name: AppTheme.icon("internet-web-browser")
             onClicked: updateManager.openReleasePage(root.updateInfo.releaseUrl)
         }
     }

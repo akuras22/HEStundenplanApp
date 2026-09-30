@@ -8,8 +8,8 @@
   <description>
     <p>
       Zeigt den live von der QIS/LSF-Seite der Hochschule Esslingen geladenen Stundenplan in
-      Wochen- und Tagesansicht, mit Suche und Vorlesungs-Erinnerungen. Für KDE Plasma optimiert,
-      läuft dank Kirigami aber auch unter GNOME und anderen Linux-Desktops.
+      Wochen- und Tagesansicht, mit Suche und Vorlesungs-Erinnerungen. Passt sich dem Desktop an:
+      unter KDE Plasma im KDE-Look, unter GNOME und anderen Linux-Desktops im GNOME-Look.
     </p>
   </description>
   <launchable type="desktop-id">org.hsesslingen.stundenplan.desktop.desktop</launchable>

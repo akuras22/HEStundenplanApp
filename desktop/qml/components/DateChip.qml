@@ -17,7 +17,7 @@ RowLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: Kirigami.Units.gridUnit * 2.2
-        radius: Kirigami.Units.cornerRadius
+        radius: AppTheme.controlRadius
         color: root.isToday ? AppTheme.accentColor : "transparent"
 
         ColumnLayout {
@@ -27,13 +27,13 @@ RowLayout {
                 id: dayText
                 Layout.alignment: Qt.AlignHCenter
                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                color: root.isToday ? "#ffffff" : Kirigami.Theme.disabledTextColor
+                color: root.isToday ? "#ffffff" : AppTheme.disabledTextColor
             }
             Controls.Label {
                 id: dateText
                 Layout.alignment: Qt.AlignHCenter
                 font.bold: true
-                color: root.isToday ? "#ffffff" : Kirigami.Theme.textColor
+                color: root.isToday ? "#ffffff" : AppTheme.textColor
             }
         }
     }
