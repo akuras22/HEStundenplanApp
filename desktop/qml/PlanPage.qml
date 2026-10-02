@@ -10,9 +10,9 @@ import "settings"
 Kirigami.Page {
     id: root
 
-    title: root.transitView ? (transitController.stop.shortName || qsTr("Abfahrten"))
-         : root.mensaView ? (mensaController.location.name || qsTr("Mensa"))
-         : (timetableController.selectedStudiengang.code || qsTr("Stundenplan"))
+    title: root.mensaView
+           ? (mensaController.location.name || qsTr("Mensa"))
+           : (timetableController.selectedStudiengang.code || qsTr("Stundenplan"))
     padding: Kirigami.Units.smallSpacing
     topPadding: AppTheme.gnome ? 0 : Kirigami.Units.smallSpacing
 
@@ -22,11 +22,8 @@ Kirigami.Page {
     // KDE look: Kirigami's toolbar shows it via titleDelegate. GNOME look: our HeaderBar picks it
     // up as headerBarTitle instead — titleDelegate must stay untouched there, or Kirigami would
     // put the delegate in a strip of its own above the page now that its toolbar is off.
-    // In the Mensa/Abfahrten views the title is the chosen Mensa/stop instead, switchable the
-    // same way.
-    readonly property Component headerBarTitle: root.transitView ? transitSwitcherComponent
-                                              : root.mensaView ? mensaSwitcherComponent
-                                              : favoriteSwitcherComponent
+    // In the Mensa view the title is the chosen Mensa instead, switchable the same way.
+    readonly property Component headerBarTitle: root.mensaView ? mensaSwitcherComponent : favoriteSwitcherComponent
     Component.onCompleted: {
         if (!AppTheme.gnome)
             titleDelegate = Qt.binding(() => root.headerBarTitle)
@@ -108,91 +105,22 @@ Kirigami.Page {
         }
     }
 
-    component TransitStopItem: Controls.MenuItem {
-        required property var modelData
-        text: modelData.name
-        font.bold: modelData.id === transitController.stop.id
-        onTriggered: transitController.setStop(modelData.id, modelData.name, modelData.shortName)
-    }
-
-    Component {
-        id: transitSwitcherComponent
-        Controls.ToolButton {
-            id: transitTitleButton
-            readonly property bool hasStop: !!transitController.stop.id
-            text: root.title
-            font.bold: true
-            font.pointSize: Kirigami.Theme.defaultFont.pointSize * 1.15
-            icon.name: hasStop ? AppTheme.icon("arrow-down") : ""
-            display: Controls.AbstractButton.TextBesideIcon
-            LayoutMirroring.enabled: AppTheme.gnome
-            enabled: hasStop
-            opacity: 1
-            onClicked: transitMenu.open()
-
-            Controls.Menu {
-                id: transitMenu
-                x: AppTheme.gnome ? Math.round((transitTitleButton.width - width) / 2) : 0
-                y: transitTitleButton.height + (AppTheme.gnome ? 6 : 0)
-
-                // Campus stops first, then stops found through the search before.
-                Repeater {
-                    model: transitController.presets
-                    delegate: TransitStopItem {}
-                }
-                Controls.MenuSeparator {
-                    visible: recentStops.count > 0
-                }
-                Repeater {
-                    id: recentStops
-                    model: transitController.recentStops
-                    delegate: TransitStopItem {}
-                }
-                Controls.MenuSeparator {}
-                Controls.MenuItem {
-                    text: qsTr("Andere Haltestelle suchen …")
-                    icon.name: AppTheme.icon("search")
-                    onTriggered: stopSearch.open()
-                }
-            }
-        }
-    }
-
     property bool dayView: settingsStore.defaultViewIsDay
     property date currentDate: new Date()
     /** The third view next to Woche/Tag (see MensaView.qml). */
     property bool mensaView: false
-    /** The fourth view: live departures (see TransitView.qml). */
-    property bool transitView: false
-    /** Mensa and Abfahrten don't depend on a Studiengang and aren't views of the plan. */
-    readonly property bool sideView: mensaView || transitView
 
-    // Nothing is fetched from the Speiseplan site / the VVS until their view is actually shown.
+    // Nothing is fetched from the Speiseplan site until the Mensa view is actually shown.
     Binding {
         target: mensaController
         property: "active"
         value: root.mensaView
-    }
-    // The departure board refreshes every minute while active — not while the window is closed
-    // (the app may keep running in the background for reminders) or minimized.
-    readonly property bool windowShown: !root.Window.window
-        || (root.Window.window.visibility !== Window.Hidden && root.Window.window.visibility !== Window.Minimized)
-    Binding {
-        target: transitController
-        property: "active"
-        value: root.transitView && root.windowShown
     }
 
     /** Woche (0), Tag (1) or Mensa (2), as picked in the view switcher. The Mensa view opens on
      *  the day the plan was showing and hands its own day back on the way out, so switching
      *  between them stays on the same day — like the Android app, whose tabs share one date. */
     function selectView(index) {
-        if (index === 3) {
-            root.mensaView = false
-            root.transitView = true
-            return
-        }
-        root.transitView = false
         if (index === 2) {
             if (!root.mensaView) {
                 if (root.dayView)
@@ -233,7 +161,6 @@ Kirigami.Page {
     function showDayView(date) {
         root.currentDate = date
         root.mensaView = false
-        root.transitView = false
         root.dayView = true
         var monday = mondayOf(date)
         if (monday.getTime() !== mondayOf(timetableController.weekMonday).getTime())
@@ -275,22 +202,20 @@ Kirigami.Page {
 
     // Whether the current view has anything to navigate/refresh: a Studiengang for Woche/Tag, a
     // chosen Mensa for the Mensa view.
-    readonly property bool viewReady: root.transitView ? !!transitController.stop.id
-                                    : root.mensaView ? mensaController.locationId !== 0
-                                    : !!timetableController.selectedStudiengang.code
+    readonly property bool viewReady: root.mensaView ? mensaController.locationId !== 0
+                                                     : !!timetableController.selectedStudiengang.code
 
     actions: [
         Kirigami.Action {
             icon.name: AppTheme.icon("search")
             text: qsTr("Suche")
-            visible: !root.sideView
+            visible: !root.mensaView
             enabled: !!timetableController.selectedStudiengang.code
             onTriggered: searchSheet.open()
         },
         Kirigami.Action {
             icon.name: AppTheme.icon("go-jump-today")
             text: qsTr("Heute")
-            visible: !root.transitView
             enabled: root.viewReady
             onTriggered: root.mensaView ? mensaController.goToday() : root.goToday()
         },
@@ -298,9 +223,7 @@ Kirigami.Page {
             icon.name: AppTheme.icon("view-refresh")
             text: qsTr("Aktualisieren")
             enabled: root.viewReady
-            onTriggered: root.transitView ? transitController.refresh()
-                       : root.mensaView ? mensaController.refresh()
-                       : timetableController.refresh()
+            onTriggered: root.mensaView ? mensaController.refresh() : timetableController.refresh()
         },
         Kirigami.Action {
             icon.name: AppTheme.icon("configure")
@@ -319,12 +242,12 @@ Kirigami.Page {
         spacing: Kirigami.Units.smallSpacing
 
         OfflineBanner {
-            visible: timetableController.offline && !root.sideView
+            visible: timetableController.offline && !root.mensaView
         }
 
         Banner {
             type: Kirigami.MessageType.Error
-            visible: !!timetableController.errorMessage && !root.sideView
+            visible: !!timetableController.errorMessage && !root.mensaView
             text: timetableController.errorMessage
         }
 
@@ -334,7 +257,7 @@ Kirigami.Page {
             // Shown once a fetch actually succeeded but this specific week has no events —
             // e.g. semester break or before the term starts — so an empty grid doesn't read as
             // "the app can't find my schedule" when QIS itself has nothing to show.
-            visible: !root.sideView
+            visible: !root.mensaView
                      && !!timetableController.selectedStudiengang.code && !timetableController.loading
                      && !timetableController.errorMessage && !timetableController.offline
                      && !root.viewHasEvents
@@ -356,8 +279,6 @@ Kirigami.Page {
 
             Controls.ToolButton {
                 icon.name: AppTheme.icon("go-previous")
-                // The departure board has no days to step through.
-                visible: !root.transitView
                 enabled: root.viewReady
                 onClicked: root.mensaView ? mensaController.stepDay(-1)
                                           : root.dayView ? root.stepDay(-1) : root.stepWeek(-1)
@@ -365,22 +286,18 @@ Kirigami.Page {
 
             SegmentedSwitch {
                 Layout.fillWidth: !AppTheme.gnome
-                Layout.preferredWidth: AppTheme.gnome ? Kirigami.Units.gridUnit * 24 : -1
-                currentIndex: root.transitView ? 3 : root.mensaView ? 2 : root.dayView ? 1 : 0
+                Layout.preferredWidth: AppTheme.gnome ? Kirigami.Units.gridUnit * 18 : -1
+                currentIndex: root.mensaView ? 2 : root.dayView ? 1 : 0
                 model: [
                     { text: qsTr("Woche"), icon: "view-calendar-week" },
                     { text: qsTr("Tag"), icon: "view-calendar-day" },
-                    { text: qsTr("Mensa"), icon: "food" },
-                    // No bus in Breeze's or Adwaita's icon sets, so it's bundled; the GNOME
-                    // toggle group is text-only anyway.
-                    { text: qsTr("Abfahrten"), icon: AppTheme.gnome ? "" : Qt.resolvedUrl("../icons/bus-symbolic.svg") }
+                    { text: qsTr("Mensa"), icon: "food" }
                 ]
                 onActivated: (index) => root.selectView(index)
             }
 
             Controls.ToolButton {
                 icon.name: AppTheme.icon("go-next")
-                visible: !root.transitView
                 enabled: root.viewReady
                 onClicked: root.mensaView ? mensaController.stepDay(1)
                                           : root.dayView ? root.stepDay(1) : root.stepWeek(1)
@@ -402,7 +319,7 @@ Kirigami.Page {
             Kirigami.PlaceholderMessage {
                 anchors.centerIn: parent
                 width: parent.width - Kirigami.Units.gridUnit * 4
-                visible: !root.sideView && !timetableController.selectedStudiengang.code
+                visible: !root.mensaView && !timetableController.selectedStudiengang.code
                 icon.name: AppTheme.gnome ? "x-office-calendar-symbolic" : "view-calendar-week"
                 text: qsTr("Kein Studiengang ausgewählt")
                 explanation: qsTr("Wähle in den Einstellungen einen Studiengang aus, um deinen Stundenplan zu sehen.")
@@ -414,15 +331,14 @@ Kirigami.Page {
 
             Loader {
                 anchors.fill: parent
-                active: root.sideView || !!timetableController.selectedStudiengang.code
-                sourceComponent: root.transitView ? transitViewComponent
-                               : root.mensaView ? mensaViewComponent
-                               : root.dayView ? dayViewComponent : weekViewComponent
+                active: root.mensaView || !!timetableController.selectedStudiengang.code
+                sourceComponent: root.mensaView ? mensaViewComponent
+                                                : root.dayView ? dayViewComponent : weekViewComponent
             }
 
             Rectangle {
                 anchors.fill: parent
-                visible: timetableController.loading && !root.sideView
+                visible: timetableController.loading && !root.mensaView
                 color: Qt.rgba(AppTheme.backgroundColor.r, AppTheme.backgroundColor.g, AppTheme.backgroundColor.b, 0.6)
 
                 Controls.BusyIndicator {
@@ -471,53 +387,6 @@ Kirigami.Page {
 
     MealDetailSheet {
         id: mealSheet
-    }
-
-    Component {
-        id: transitViewComponent
-        TransitView {
-            onSearchRequested: stopSearch.open()
-            onNoticesRequested: (notices) => {
-                noticesSheet.notices = notices
-                noticesSheet.open()
-            }
-        }
-    }
-
-    StopSearchSheet {
-        id: stopSearch
-    }
-
-    // Disruption notices of one departure (diversions, broken lifts, ...).
-    AppSheet {
-        id: noticesSheet
-        property var notices: []
-        title: qsTr("Hinweise")
-
-        ColumnLayout {
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 24
-            spacing: Kirigami.Units.largeSpacing
-            Repeater {
-                model: noticesSheet.notices
-                delegate: ColumnLayout {
-                    required property var modelData
-                    Layout.fillWidth: true
-                    spacing: 2
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        text: modelData.title
-                        font.bold: true
-                        wrapMode: Text.Wrap
-                    }
-                    Controls.Label {
-                        Layout.fillWidth: true
-                        visible: !!modelData.text && modelData.text !== modelData.title
-                        text: modelData.text
-                        wrapMode: Text.Wrap
-                    }
-                }
-            }
-        }
     }
 
     SearchDialog {

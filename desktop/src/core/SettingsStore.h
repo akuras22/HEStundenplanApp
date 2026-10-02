@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Models.h"
-#include "TransitParser.h"
 #include <KConfigGroup>
 #include <KSharedConfig>
 #include <QObject>
@@ -86,13 +85,6 @@ public:
     bool backgroundHintShown() const;
     void setBackgroundHintShown(bool shown);
 
-    /** The stop the Abfahrten view shows — nullopt until one is picked. */
-    std::optional<TransitStop> transitStop() const;
-    /** Also remembers `stop` among the recent ones when it isn't a campus preset. */
-    void setTransitStop(const TransitStop &stop, bool isPreset);
-    /** Stops picked through the search, newest first. */
-    QList<TransitStop> recentTransitStops() const;
-
 Q_SIGNALS:
     void defaultViewIsDayChanged();
     void blockShowTimeChanged();
@@ -104,7 +96,6 @@ Q_SIGNALS:
     void hiddenEventKeysChanged();
     void selectedStudiengangChanged();
     void mensaLocationIdChanged();
-    void transitStopChanged();
     void runInBackgroundChanged();
     void autostartChanged();
 

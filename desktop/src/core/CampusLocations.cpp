@@ -14,38 +14,40 @@ struct CampusBuilding {
     bool approximate = false;
 };
 
-// Keyed by campus letter + two-digit building number (+ suffix, e.g. "S13A"). Coordinates are
-// each building's centre in OpenStreetMap; addresses from QIS's building pages and OSM.
+// Keyed by campus letter + two-digit building number (+ suffix, e.g. "S13A"). Coordinates are the
+// point deepest inside each building's OpenStreetMap outline ("pole of inaccessibility") — not the
+// outline's bounding-box centre, which for L-, U- and courtyard-shaped buildings like F 01 lands in
+// a courtyard or the next building. Addresses from QIS's building pages and OSM.
 const QHash<QString, CampusBuilding> &buildings()
 {
     static const QHash<QString, CampusBuilding> table = {
-        {QStringLiteral("S01"), {48.738052, 9.311017, "Kanalstraße 33, Esslingen"}},
-        {QStringLiteral("S02"), {48.738153, 9.311370, "Mühlstraße 1, Esslingen"}},
-        {QStringLiteral("S03"), {48.738473, 9.311351, "Mühlstraße, Esslingen"}},
-        {QStringLiteral("S04"), {48.738430, 9.311853, "Mühlstraße 5, Esslingen"}},
-        {QStringLiteral("S05"), {48.738434, 9.312406, "Mühlstraße 7, Esslingen"}},
-        {QStringLiteral("S06"), {48.738636, 9.311785, "Obertorstraße 16, Esslingen"}},
-        {QStringLiteral("S07"), {48.738137, 9.312203, "Mühlstraße 3, Esslingen"}},
-        {QStringLiteral("S08"), {48.738566, 9.312616, "Mühlstraße 9, Esslingen"}},
-        {QStringLiteral("S09"), {48.738640, 9.310751, "Kanalstraße 31, Esslingen"}},
-        {QStringLiteral("S10"), {48.739003, 9.310273, "Kanalstraße 29, Esslingen"}},
-        {QStringLiteral("S12"), {48.737598, 9.312810, "Neckarstraße 67, Esslingen"}},
-        {QStringLiteral("S13"), {48.737161, 9.312694, "Neckarstraße 63, Esslingen"}},
-        {QStringLiteral("S13A"), {48.737161, 9.312694, "Neckarstraße, Esslingen", true}},
-        {QStringLiteral("S14"), {48.737167, 9.313030, "Neckarstraße 65/1, Esslingen"}},
-        {QStringLiteral("S15"), {48.737949, 9.312906, "Neckarstraße 67/1, Esslingen"}},
-        {QStringLiteral("S16"), {48.738641, 9.310159, "Kanalstraße 27, Esslingen"}},
-        {QStringLiteral("S17"), {48.738558, 9.309825, "Kanalstraße 12/1, Esslingen"}},
+        {QStringLiteral("S01"), {48.738233, 9.310741, "Kanalstraße 33, Esslingen"}},
+        {QStringLiteral("S02"), {48.737981, 9.311567, "Mühlstraße 1, Esslingen"}},
+        {QStringLiteral("S03"), {48.738488, 9.311343, "Mühlstraße, Esslingen"}},
+        {QStringLiteral("S04"), {48.738393, 9.311696, "Mühlstraße 5, Esslingen"}},
+        {QStringLiteral("S05"), {48.738619, 9.312247, "Mühlstraße 7, Esslingen"}},
+        {QStringLiteral("S06"), {48.738603, 9.311675, "Obertorstraße 16, Esslingen"}},
+        {QStringLiteral("S07"), {48.738094, 9.312056, "Mühlstraße 3, Esslingen"}},
+        {QStringLiteral("S08"), {48.738511, 9.312604, "Mühlstraße 9, Esslingen"}},
+        {QStringLiteral("S09"), {48.738681, 9.310848, "Kanalstraße 31, Esslingen"}},
+        {QStringLiteral("S10"), {48.738975, 9.310061, "Kanalstraße 29, Esslingen"}},
+        {QStringLiteral("S12"), {48.737626, 9.312816, "Neckarstraße 67, Esslingen"}},
+        {QStringLiteral("S13"), {48.737003, 9.312654, "Neckarstraße 63, Esslingen"}},
+        {QStringLiteral("S13A"), {48.737003, 9.312654, "Neckarstraße, Esslingen", true}},
+        {QStringLiteral("S14"), {48.737162, 9.313074, "Neckarstraße 65/1, Esslingen"}},
+        {QStringLiteral("S15"), {48.737845, 9.312944, "Neckarstraße 67/1, Esslingen"}},
+        {QStringLiteral("S16"), {48.738630, 9.310171, "Kanalstraße 27, Esslingen"}},
+        {QStringLiteral("S17"), {48.738574, 9.309794, "Kanalstraße 12/1, Esslingen"}},
         {QStringLiteral("S18"), {48.737400, 9.312500, "Neckarstraße, Esslingen", true}},
-        {QStringLiteral("S19"), {48.739139, 9.311391, "Kiesstraße 6, Esslingen"}},
-        {QStringLiteral("F01"), {48.745379, 9.321960, "Flandernstraße 101, Esslingen"}},
-        {QStringLiteral("F02"), {48.745386, 9.323379, "Flandernstraße 103, Esslingen"}},
-        {QStringLiteral("F03"), {48.744536, 9.323845, "Flandernstraße 107, Esslingen"}},
-        {QStringLiteral("G01"), {48.697681, 9.656060, "Robert-Bosch-Straße 1, Göppingen"}},
-        {QStringLiteral("G02"), {48.696605, 9.656542, "Robert-Bosch-Straße 4, Göppingen"}},
-        {QStringLiteral("G03"), {48.697660, 9.656347, "Robert-Bosch-Straße, Göppingen"}},
-        {QStringLiteral("G04"), {48.696875, 9.656001, "Robert-Bosch-Straße 2, Göppingen"}},
-        {QStringLiteral("G05"), {48.696576, 9.656062, "Heinrich-Landerer-Straße 53, Göppingen"}},
+        {QStringLiteral("S19"), {48.739142, 9.311421, "Kiesstraße 6, Esslingen"}},
+        {QStringLiteral("F01"), {48.745743, 9.321663, "Flandernstraße 101, Esslingen"}},
+        {QStringLiteral("F02"), {48.745323, 9.323434, "Flandernstraße 103, Esslingen"}},
+        {QStringLiteral("F03"), {48.744560, 9.323874, "Flandernstraße 107, Esslingen"}},
+        {QStringLiteral("G01"), {48.697284, 9.655924, "Robert-Bosch-Straße 1, Göppingen"}},
+        {QStringLiteral("G02"), {48.696708, 9.656585, "Robert-Bosch-Straße 4, Göppingen"}},
+        {QStringLiteral("G03"), {48.697542, 9.656299, "Robert-Bosch-Straße, Göppingen"}},
+        {QStringLiteral("G04"), {48.696882, 9.655856, "Robert-Bosch-Straße 2, Göppingen"}},
+        {QStringLiteral("G05"), {48.696572, 9.656085, "Heinrich-Landerer-Straße 53, Göppingen"}},
         {QStringLiteral("W20"), {48.742684, 9.294114, "Mettinger Straße, Esslingen", true}},
         {QStringLiteral("W21"), {48.740133, 9.295945, "Eugenie-von-Soden-Straße, Esslingen", true}},
     };

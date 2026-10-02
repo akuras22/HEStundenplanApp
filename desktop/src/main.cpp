@@ -1,6 +1,5 @@
 #include "controller/MensaController.h"
 #include "controller/TimetableController.h"
-#include "controller/TransitController.h"
 #include "core/BackgroundService.h"
 #include "core/DesktopStyle.h"
 #include "core/ImageNetworkCache.h"
@@ -80,7 +79,6 @@ int main(int argc, char *argv[])
     auto *notifications = new NotificationManager(&app);
     auto *reminderScheduler = new ReminderScheduler(settings, cache, notifications, &app);
     auto *mensaController = new MensaController(settings, &app);
-    auto *transitController = new TransitController(settings, controller, &app);
     auto *backgroundService = new BackgroundService(settings, notifications, &app);
 
     // Declared before the engine so it outlives it — the engine doesn't take ownership.
@@ -94,7 +92,6 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("notificationManager"), notifications);
     engine.rootContext()->setContextProperty(QStringLiteral("reminderScheduler"), reminderScheduler);
     engine.rootContext()->setContextProperty(QStringLiteral("mensaController"), mensaController);
-    engine.rootContext()->setContextProperty(QStringLiteral("transitController"), transitController);
     engine.rootContext()->setContextProperty(QStringLiteral("backgroundService"), backgroundService);
     engine.rootContext()->setContextProperty(QStringLiteral("startHidden"), startHidden);
 

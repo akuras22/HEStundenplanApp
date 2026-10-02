@@ -74,10 +74,6 @@ public:
      *  rooms that aren't on a known campus. See CampusLocations. */
     Q_INVOKABLE QVariantMap roomLocation(const QString &room) const;
 
-    /** When today's last lecture ends, as minutes since midnight (hidden groups left out) — -1
-     *  when today's week isn't cached or today has nothing. For the Abfahrten view. */
-    Q_INVOKABLE int todaysLastLectureEndMinutes() const;
-
 Q_SIGNALS:
     void studiengaengeChanged();
     void favoritesChanged();

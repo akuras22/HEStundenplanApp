@@ -1,5 +1,2 @@
-- **Abfahrten**: neuer Bereich mit Live-Abfahrten von Bus und Bahn (VVS) — Verspätungen, Ausfälle, Gleis/Steig und Störungshinweise. Startet an der Haltestelle deines Campus (Hochschulzentrum, Hochschule, Göppingen, Bahnhöfe), jede andere VVS-Haltestelle lässt sich suchen.
-- **Nach der Vorlesung**: zeigt auf Wunsch die Abfahrten ab dem Ende deiner letzten Vorlesung heute.
-- **Wo ist der Raum?** Im Detail einer Veranstaltung stehen jetzt Campus, Gebäude und Etage, dazu eine kleine Karte (OpenStreetMap) und „In Karten öffnen“ für den Weg dorthin.
-- **Desktop: läuft im Hintergrund weiter** (Einstellungen ▸ Benachrichtigungen): Erinnerungen kommen auch bei geschlossenem Fenster, auf Wunsch schon ab dem Anmelden. Wieder öffnen über das Anwendungsmenü, beenden mit Strg+Q.
-- **Desktop: nur noch eine Instanz** — ein zweiter Start holt das vorhandene Fenster nach vorne.
+- **Abfahrten-Bereich wieder entfernt.**
+- **Raum-Karte genauer**: Der Pin sitzt jetzt mitten im richtigen Gebäude — vorher lag er bei verwinkelten Gebäuden (z. B. F 01) teils im Innenhof oder am Nachbargebäude. Auf dem Handy ist die Karte außerdem näher herangezoomt.

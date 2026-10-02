@@ -2,6 +2,11 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.12.1
+
+- **Abfahrten-Bereich wieder entfernt.**
+- **Raum-Karte genauer**: Der Pin sitzt jetzt mitten im richtigen Gebäude — vorher lag er bei verwinkelten Gebäuden (z. B. F 01) teils im Innenhof oder am Nachbargebäude. Auf dem Handy ist die Karte außerdem näher herangezoomt.
+
 ## Version 1.12.0
 
 - **Abfahrten**: neuer Bereich mit Live-Abfahrten von Bus und Bahn (VVS) — Verspätungen, Ausfälle, Gleis/Steig und Störungshinweise. Startet an der Haltestelle deines Campus (Hochschulzentrum, Hochschule, Göppingen, Bahnhöfe), jede andere VVS-Haltestelle lässt sich suchen.

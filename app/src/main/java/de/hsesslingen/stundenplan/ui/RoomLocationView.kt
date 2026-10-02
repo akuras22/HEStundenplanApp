@@ -43,7 +43,9 @@ import de.hsesslingen.stundenplan.data.tileIndex
 import de.hsesslingen.stundenplan.data.tilePosition
 import de.hsesslingen.stundenplan.ui.theme.PillShape
 
-private const val MAP_ZOOM = 17
+// Close enough that the building itself is clearly recognisable (outlines, house numbers), with
+// the neighbouring buildings still in view for orientation.
+private const val MAP_ZOOM = 18
 // OSM tiles are 256 px; drawn at 128 dp they come out at roughly their native sharpness on a
 // typical phone, with street names still readable.
 private val TILE_SIZE = 128.dp

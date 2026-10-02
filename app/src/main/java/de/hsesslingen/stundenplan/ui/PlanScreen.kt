@@ -45,7 +45,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Refresh
@@ -57,7 +56,6 @@ import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.material.icons.outlined.DirectionsBus
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.ViewDay
 import androidx.compose.material.icons.outlined.ViewWeek
@@ -123,7 +121,6 @@ import androidx.compose.ui.unit.sp
 import de.hsesslingen.stundenplan.data.CampusLocations
 import de.hsesslingen.stundenplan.data.MensaLocations
 import de.hsesslingen.stundenplan.data.TimetableEvent
-import de.hsesslingen.stundenplan.data.TransitStops
 import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.dayWindowFor
 import de.hsesslingen.stundenplan.data.layoutOverlaps
@@ -145,11 +142,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
-private enum class PlanViewMode { WEEK, DAY, MENSA, TRANSIT;
-
-    /** Mensa and Abfahrten don't depend on a Studiengang and aren't zoom levels of the plan. */
-    val isSideTab: Boolean get() = this == MENSA || this == TRANSIT
-}
+private enum class PlanViewMode { WEEK, DAY, MENSA }
 
 /** Which fields render on each event block (Woche/Tag) — configurable in Einstellungen ▸
  *  Darstellung. Threaded via CompositionLocal rather than a parameter on every card-drawing
@@ -361,13 +354,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     val mensaLocation = mensaLocationId?.let { MensaLocations.byId(it) }
     var showMensaMenu by remember { mutableStateOf(false) }
     val isMensa = resolvedViewMode == PlanViewMode.MENSA
-    val transitStop by viewModel.transitStop.collectAsState()
-    val recentTransitStops by viewModel.recentTransitStops.collectAsState()
-    val chosenTransitStop = transitStop?.takeIf { it != TRANSIT_STOP_LOADING }
-    var showTransitMenu by remember { mutableStateOf(false) }
-    var showStopSearch by remember { mutableStateOf(false) }
-    val isTransit = resolvedViewMode == PlanViewMode.TRANSIT
-    val isSideTab = resolvedViewMode.isSideTab
 
     // A reminder notification (or "Test-Benachrichtigung senden") tap jumps straight to that
     // day's Tag-Ansicht — cleared right after so it doesn't keep re-triggering on recomposition.
@@ -405,10 +391,10 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val title = when {
-                        isMensa -> mensaLocation?.shortName ?: "Mensa"
-                        isTransit -> chosenTransitStop?.shortName ?: "Abfahrten"
-                        else -> state.studiengang?.code ?: "Stundenplan"
+                    val title = if (isMensa) {
+                        mensaLocation?.shortName ?: "Mensa"
+                    } else {
+                        state.studiengang?.code ?: "Stundenplan"
                     }
                     // BoxWithConstraints (not a plain weight(1f) Text) so the available width is
                     // known up front for the font-fit measurement below — a weighted Text only
@@ -418,24 +404,16 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     // row's last button (Einstellungen) off-screen; an ellipsis technically fixed
                     // that but just looked broken ("Stunde…").
                     // Only worth a tap target — and a dropdown affordance — once there's more than
-                    // one Studiengang to switch between. On the Mensa/Abfahrten tabs the title is
-                    // the chosen Mensa/stop instead, always switchable once one has been picked.
-                    val showTitleSwitcher = when {
-                        isMensa -> mensaLocation != null
-                        isTransit -> chosenTransitStop != null
-                        else -> favorites.size > 1
-                    }
+                    // one Studiengang to switch between. On the Mensa tab the title is the chosen
+                    // Mensa instead, always switchable once one has been picked at all.
+                    val showTitleSwitcher = if (isMensa) mensaLocation != null else favorites.size > 1
                     BoxWithConstraints(
                         Modifier
                             .weight(1f)
                             .let {
                                 if (showTitleSwitcher) it.clickable {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    when {
-                                        isMensa -> showMensaMenu = true
-                                        isTransit -> showTransitMenu = true
-                                        else -> showFavoritesMenu = true
-                                    }
+                                    if (isMensa) showMensaMenu = true else showFavoritesMenu = true
                                 } else it
                             },
                     ) {
@@ -465,17 +443,13 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                             }
                             if (showTitleSwitcher) {
                                 val chevronRotation by animateFloatAsState(
-                                    targetValue = if (showFavoritesMenu || showMensaMenu || showTransitMenu) 180f else 0f,
+                                    targetValue = if (showFavoritesMenu || showMensaMenu) 180f else 0f,
                                     animationSpec = tween(220, easing = FastOutSlowInEasing),
                                     label = "chevronRotation",
                                 )
                                 Icon(
                                     Icons.Filled.ArrowDropDown,
-                                    contentDescription = when {
-                                        isMensa -> "Mensa wechseln"
-                                        isTransit -> "Haltestelle wechseln"
-                                        else -> "Studiengang wechseln"
-                                    },
+                                    contentDescription = if (isMensa) "Mensa wechseln" else "Studiengang wechseln",
                                     modifier = Modifier
                                         .size(28.dp)
                                         .graphicsLayer { rotationZ = chevronRotation },
@@ -509,30 +483,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                                 )
                             }
                         }
-                        DropdownMenu(expanded = showTransitMenu, onDismissRequest = { showTransitMenu = false }) {
-                            // Campus stops first, then stops found through the search before.
-                            val presetStops = TransitStops.presets.map { it.stop }
-                            val stops = presetStops + recentTransitStops.filter { recent -> presetStops.none { it.id == recent.id } }
-                            stops.forEachIndexed { index, stop ->
-                                if (index == presetStops.size) HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text(stop.name, fontWeight = if (stop.id == chosenTransitStop?.id) FontWeight.Bold else FontWeight.Normal) },
-                                    onClick = {
-                                        viewModel.setTransitStop(stop)
-                                        showTransitMenu = false
-                                    },
-                                )
-                            }
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Andere Haltestelle suchen …") },
-                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                                onClick = {
-                                    showTransitMenu = false
-                                    showStopSearch = true
-                                },
-                            )
-                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Heute/Datum/Aktualisieren all act on a plan that doesn't exist yet
@@ -546,10 +496,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                                     viewModel.loadMensaDay(mensaLocation.id, selectedDate, force = true)
                                 }
                             }
-                        } else if (isTransit) {
-                            if (chosenTransitStop != null) {
-                                GlassIconButton(Icons.Filled.Refresh, "Aktualisieren") { viewModel.refreshDepartures() }
-                            }
                         } else if (state.studiengang != null) {
                             GlassIconButton(Icons.Filled.Search, "Suchen") { showSearch = true }
                             GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
@@ -560,7 +506,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     }
                 }
 
-                if (state.isOffline && !isSideTab) {
+                if (state.isOffline && !isMensa) {
                     OfflineBanner(since = state.offlineSince)
                 }
 
@@ -570,22 +516,22 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         .fillMaxWidth(),
                 ) {
                     when {
-                        // The Mensa/Abfahrten tabs need no Studiengang at all, so none of the
-                        // plan's own empty/loading/error states apply to them.
-                        !isSideTab && state.studiengang == null && !state.isLoading -> EmptyState(onOpenSettings)
+                        // The Mensa tab needs no Studiengang at all, so none of the plan's own
+                        // empty/loading/error states apply to it.
+                        !isMensa && state.studiengang == null && !state.isLoading -> EmptyState(onOpenSettings)
                         // Only block the whole screen on the very first load. Once a week has ever
                         // loaded, swiping to a new week fetches quietly in the background so the
                         // pager keeps swiping smoothly instead of flashing a spinner every time.
-                        !isSideTab && state.isLoading && state.weekMonday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        !isMensa && state.isLoading && state.weekMonday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             LoadingGlyph()
                         }
-                        !isSideTab && state.error != null -> ErrorState(state.error!!, onRetry = { viewModel.refresh() })
+                        !isMensa && state.error != null -> ErrorState(state.error!!, onRetry = { viewModel.refresh() })
                         else -> AnimatedContent(
                             targetState = resolvedViewMode,
                             transitionSpec = {
-                                // Mensa/Abfahrten are different places altogether, not another zoom
-                                // level of the plan — they slide in sideways from where their tab sits.
-                                if (initialState.isSideTab || targetState.isSideTab) {
+                                // Mensa is a different place altogether, not another zoom level of
+                                // the plan — it slides in sideways from where its tab sits.
+                                if (initialState == PlanViewMode.MENSA || targetState == PlanViewMode.MENSA) {
                                     val direction = if (targetState.ordinal > initialState.ordinal) 1 else -1
                                     val slideSpring = spring<IntOffset>(
                                         dampingRatio = Spring.DampingRatioNoBouncy,
@@ -634,18 +580,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                                     locationId = mensaLocationId,
                                     selectedDate = selectedDate,
                                     onDateSelected = { selectedDate = it },
-                                )
-                            } else if (mode == PlanViewMode.TRANSIT) {
-                                // Recomputed whenever a week (re)loads, which is when today's
-                                // lectures can first become known.
-                                val lastLectureEnd = remember(state.events, state.weekMonday, hiddenGroupKeys) {
-                                    viewModel.todaysLastLectureEnd()
-                                }
-                                TransitView(
-                                    viewModel = viewModel,
-                                    stop = transitStop,
-                                    lastLectureEnd = lastLectureEnd,
-                                    onSearchStop = { showStopSearch = true },
                                 )
                             } else if (mode == PlanViewMode.WEEK) {
                                 WeekView(
@@ -709,17 +643,6 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
             hidden = event.groupKey in hiddenGroupKeys,
             onToggleHidden = { hidden -> viewModel.setGroupHidden(event.groupKey, hidden) },
             onDismiss = { selectedEvent = null },
-        )
-    }
-
-    if (showStopSearch) {
-        TransitStopSearchDialog(
-            viewModel = viewModel,
-            onSelect = { stop ->
-                viewModel.setTransitStop(stop)
-                showStopSearch = false
-            },
-            onDismiss = { showStopSearch = false },
         )
     }
 
@@ -817,16 +740,15 @@ private const val OneUiNavSelectedWashDark = 0.10f
 private const val OneUiNavSelectedWashLight = 0.89f
 
 private val OneUiNavSegmentWidth = 123.8.dp
-// With four tabs (Woche/Tag/Mensa/Abfahrten), full-width segments would make the track far wider
-// than a 360dp phone minus the pill's 20dp side margins (4 × 82 − 3 × 8.5 + 8.6 ≈ 311dp fits).
-// Samsung's own 4-tab bars shrink the segments the same way rather than the spacing, so only the
-// width changes; everything else stays measured.
-private val OneUiNavSegmentWidthFourTabs = 82.dp
+// With a third tab (Mensa), full-width segments would make the track ~363dp — wider than a 360dp
+// phone minus the pill's 20dp side margins. Samsung's own 3-tab bars shrink the segments the
+// same way rather than the spacing, so only the width changes; everything else stays measured.
+private val OneUiNavSegmentWidthThreeTabs = 100.dp
 private val OneUiNavSegmentHeight = 51.2.dp
 private val OneUiNavSegmentOverlap = 8.5.dp
 private val OneUiNavTrackPadding = 4.3.dp
 
-/** Floating tab switcher (Woche/Tag/Mensa/Abfahrten) — see the measurements above for where every value comes from. */
+/** Floating tab switcher (Woche/Tag/Mensa) — see the measurements above for where every value comes from. */
 @Composable
 private fun BottomNavPill(
     selected: PlanViewMode,
@@ -841,7 +763,7 @@ private fun BottomNavPill(
             .background(if (dark) OneUiNavTrackDark else OneUiNavTrackLight)
             .padding(OneUiNavTrackPadding)
             // Tells TalkBack these tabs are a mutually-exclusive group, matching how a
-            // Woche/Tag/Mensa/Abfahrten switch actually behaves — pairs with Role.Tab on each item below.
+            // Woche/Tag/Mensa switch actually behaves — pairs with Role.Tab on each item below.
             .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(-OneUiNavSegmentOverlap),
     ) {
@@ -850,29 +772,22 @@ private fun BottomNavPill(
             unselectedIcon = Icons.Outlined.ViewWeek,
             label = "Woche",
             selected = selected == PlanViewMode.WEEK,
-            width = OneUiNavSegmentWidthFourTabs,
+            width = OneUiNavSegmentWidthThreeTabs,
         ) { onSelect(PlanViewMode.WEEK) }
         BottomNavItem(
             selectedIcon = Icons.Filled.ViewDay,
             unselectedIcon = Icons.Outlined.ViewDay,
             label = "Tag",
             selected = selected == PlanViewMode.DAY,
-            width = OneUiNavSegmentWidthFourTabs,
+            width = OneUiNavSegmentWidthThreeTabs,
         ) { onSelect(PlanViewMode.DAY) }
         BottomNavItem(
             selectedIcon = Icons.Filled.Restaurant,
             unselectedIcon = Icons.Outlined.Restaurant,
             label = "Mensa",
             selected = selected == PlanViewMode.MENSA,
-            width = OneUiNavSegmentWidthFourTabs,
+            width = OneUiNavSegmentWidthThreeTabs,
         ) { onSelect(PlanViewMode.MENSA) }
-        BottomNavItem(
-            selectedIcon = Icons.Filled.DirectionsBus,
-            unselectedIcon = Icons.Outlined.DirectionsBus,
-            label = "Abfahrten",
-            selected = selected == PlanViewMode.TRANSIT,
-            width = OneUiNavSegmentWidthFourTabs,
-        ) { onSelect(PlanViewMode.TRANSIT) }
     }
 }
 

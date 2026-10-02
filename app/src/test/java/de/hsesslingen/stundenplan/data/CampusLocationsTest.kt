@@ -15,7 +15,7 @@ class CampusLocationsTest {
         assertEquals("Campus Esslingen Flandernstraße", f.campusName)
         assertEquals("Gebäude F 01", f.buildingName)
         assertEquals("4. Obergeschoss", f.floorLabel)
-        assertEquals(48.745379, f.latitude, 1e-6)
+        assertEquals(48.745743, f.latitude, 1e-6)
 
         assertEquals("Erdgeschoss", CampusLocations.locateRoom("Gebäude 01 - F 01.016")!!.floorLabel)
         assertEquals("Untergeschoss", CampusLocations.locateRoom("Gebäude 01 - S 01.-122")!!.floorLabel)
@@ -42,7 +42,7 @@ class CampusLocationsTest {
 
     @Test
     fun `tile math matches OpenStreetMap's`() {
-        // Building F 01 lies in tile 17/68930/45153 (standard slippy-map formula, computed separately).
+        // 48.745379, 9.321960 lies in tile 17/68930/45153 (standard slippy-map formula, computed separately).
         val position = tilePosition(48.745379, 9.321960, 17)
         assertEquals(68930, tileIndex(position.x))
         assertEquals(45153, tileIndex(position.y))

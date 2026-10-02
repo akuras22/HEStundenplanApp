@@ -12,6 +12,8 @@ Item {
     property real latitude
     property real longitude
     property string mapUrl
+    // Tiles drawn at their native 256 px: zoom 17 shows the building with its neighbours, about
+    // the same area the Android app shows at zoom 18 with its smaller tiles.
     readonly property int zoom: 17
     readonly property int tileSize: 256
 

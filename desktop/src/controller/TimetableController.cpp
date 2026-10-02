@@ -334,22 +334,4 @@ QVariantMap TimetableController::roomLocation(const QString &room) const
     return m;
 }
 
-int TimetableController::todaysLastLectureEndMinutes() const
-{
-    const auto sg = currentStudiengang();
-    if (!sg)
-        return -1;
-    const QDate today = QDate::currentDate();
-    const auto cached = m_cache->get(*sg, today.addDays(1 - today.dayOfWeek()));
-    if (!cached)
-        return -1;
-    const QSet<QString> hidden = m_settings->hiddenEventKeys();
-    int latest = -1;
-    for (const auto &event : cached->events) {
-        if (event.appliesOn(today) && !hidden.contains(event.groupKey()))
-            latest = std::max(latest, event.endMinutes);
-    }
-    return latest;
-}
-
 } // namespace stundenplan

@@ -56,8 +56,6 @@ Rectangle {
                     Kirigami.Icon {
                         visible: segment.iconName !== ""
                         source: segment.iconName
-                        // Bundled icons are plain black SVGs; tint them like the theme's own.
-                        isMask: segment.iconName.endsWith("-symbolic.svg")
                         implicitWidth: Kirigami.Units.iconSizes.small
                         implicitHeight: Kirigami.Units.iconSizes.small
                         color: segment.contentColor
