@@ -1,7 +1,8 @@
 # HEStundenplan
 
 Inoffizieller Stundenplan der Hochschule Esslingen — live von der öffentlichen QIS/LSF-Seite
-geladen, mit Wochen-/Tagesansicht, Suche, Vorlesungs-Erinnerungen und anpassbarem Design.
+geladen, mit Wochen-/Tagesansicht, Suche, Vorlesungs-Erinnerungen und anpassbarem Design. Dazu
+der Mensa-Speiseplan des Studierendenwerks Stuttgart mit Fotos, Preisen und Allergenen.
 
 Es gibt zwei Apps in diesem Repository:
 
@@ -12,8 +13,10 @@ Es gibt zwei Apps in diesem Repository:
 
 Beide Apps sprechen dieselbe öffentliche QIS/LSF-Schnittstelle der Hochschule an und bieten den
 gleichen Funktionsumfang (Wochen-/Tagesansicht, Studiengang-Auswahl mit Favoriten, Suche,
-Vorlesungs-Erinnerungen, anpassbares Aussehen). Es gibt kein Backend und keinen Login — alle Daten
-kommen live von der Hochschulseite.
+Vorlesungs-Erinnerungen, anpassbares Aussehen, Mensa-Speiseplan). Es gibt kein Backend und keinen
+Login — alle Daten kommen live von der Hochschulseite bzw. vom
+[Speiseplan des Studierendenwerks Stuttgart](https://www.studierendenwerk-stuttgart.de/essen/speiseplan)
+(Standort wählbar: die drei Mensen der HS Esslingen und die übrigen des Studierendenwerks).
 
 ## Android
 

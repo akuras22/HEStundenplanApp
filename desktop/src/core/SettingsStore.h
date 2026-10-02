@@ -29,6 +29,7 @@ class SettingsStore : public QObject
     Q_PROPERTY(bool remindersEnabled READ remindersEnabled WRITE setRemindersEnabled NOTIFY remindersEnabledChanged)
     Q_PROPERTY(QVariantList reminderLeadMinutes READ reminderLeadMinutes WRITE setReminderLeadMinutes NOTIFY
                    reminderLeadMinutesChanged)
+    Q_PROPERTY(int mensaLocationId READ mensaLocationId WRITE setMensaLocationId NOTIFY mensaLocationIdChanged)
 
 public:
     explicit SettingsStore(QObject *parent = nullptr);
@@ -68,6 +69,11 @@ public:
 
     Q_INVOKABLE void resetAppearance();
 
+    /** The Mensa whose Speiseplan the Mensa view shows (a mensaLocations() id) — 0 until the
+     *  user picks one, since there's no way to tell which campus they're on. */
+    int mensaLocationId() const;
+    void setMensaLocationId(int id);
+
 Q_SIGNALS:
     void defaultViewIsDayChanged();
     void blockShowTimeChanged();
@@ -78,6 +84,7 @@ Q_SIGNALS:
     void favoritesChanged();
     void hiddenEventKeysChanged();
     void selectedStudiengangChanged();
+    void mensaLocationIdChanged();
 
 private:
     KConfigGroup group(const QString &name) const;

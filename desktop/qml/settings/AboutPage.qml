@@ -106,11 +106,12 @@ PrefPage {
     PrefGroup {
         PrefRow {
             text: qsTr("Zwischenspeicher leeren")
-            subtitle: qsTr("Gespeicherte Stundenpläne entfernen; sie werden beim nächsten Öffnen neu geladen")
+            subtitle: qsTr("Gespeicherte Stundenpläne und Speiseplan-Fotos entfernen; sie werden beim nächsten Öffnen neu geladen")
             icon.name: AppTheme.icon("edit-clear-all")
             activatable: true
             onClicked: {
                 timetableController.clearCache()
+                mensaController.clearCache()
                 root.showStatus(qsTr("Zwischenspeicher geleert."), Kirigami.MessageType.Positive)
             }
         }

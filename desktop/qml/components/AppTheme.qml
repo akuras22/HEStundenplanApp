@@ -54,6 +54,7 @@ QtObject {
         "arrow-down": "pan-down-symbolic",
         "view-calendar-week": "",
         "view-calendar-day": "",
+        "food": "",
         "view-calendar-list": "view-list-bullet-symbolic",
         "notifications": "preferences-system-notifications-symbolic",
         "preferences-desktop-theme": "applications-graphics-symbolic",

@@ -1,5 +1,7 @@
 #include "SettingsStore.h"
 
+#include "MensaModels.h"
+
 #include <QStringList>
 
 namespace stundenplan {
@@ -11,6 +13,7 @@ const char *kGroupFavorites = "Favorites";
 const char *kGroupHidden = "HiddenEvents";
 const char *kGroupNotifications = "Notifications";
 const char *kGroupAppearance = "Appearance";
+const char *kGroupMensa = "Mensa";
 const char *kFieldSep = "||";
 
 QString encodeStudiengang(const Studiengang &s)
@@ -258,6 +261,22 @@ void SettingsStore::resetAppearance()
     Q_EMIT blockShowTimeChanged();
     Q_EMIT blockShowRoomChanged();
     Q_EMIT blockShowLecturerChanged();
+}
+
+int SettingsStore::mensaLocationId() const
+{
+    const int id = group(QString::fromLatin1(kGroupMensa)).readEntry("locationId", 0);
+    return mensaLocationById(id).has_value() ? id : 0;
+}
+
+void SettingsStore::setMensaLocationId(int id)
+{
+    if (id == mensaLocationId())
+        return;
+    auto g = group(QString::fromLatin1(kGroupMensa));
+    g.writeEntry("locationId", id);
+    g.sync();
+    Q_EMIT mensaLocationIdChanged();
 }
 
 } // namespace stundenplan

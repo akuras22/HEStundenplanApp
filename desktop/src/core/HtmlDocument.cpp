@@ -34,6 +34,14 @@ void collectText(const xmlNode *node, QString &out)
     }
 }
 
+QString collapseWhitespace(QString text)
+{
+    // Collapse all whitespace runs (spaces, tabs, newlines) into single spaces, then trim —
+    // matches Jsoup's Element.text() normalization closely enough for this table-layout HTML.
+    static const QRegularExpression whitespaceRun(QStringLiteral("\\s+"));
+    return text.replace(whitespaceRun, QStringLiteral(" ")).trimmed();
+}
+
 void collectDescendantsByTag(const xmlNode *node, const QString &tag, QList<HtmlElement> &out)
 {
     for (xmlNode *child = node->children; child; child = child->next) {
@@ -70,10 +78,47 @@ QString HtmlElement::text() const
         return {};
     QString out;
     collectText(m_node, out);
-    // Collapse all whitespace runs (spaces, tabs, newlines) into single spaces, then trim —
-    // matches Jsoup's Element.text() normalization closely enough for this table-layout HTML.
-    static const QRegularExpression whitespaceRun(QStringLiteral("\\s+"));
-    return out.replace(whitespaceRun, QStringLiteral(" ")).trimmed();
+    return collapseWhitespace(out);
+}
+
+QString HtmlElement::ownText() const
+{
+    if (!m_node)
+        return {};
+    QString out;
+    for (const xmlNode *child = m_node->children; child; child = child->next) {
+        if ((child->type == XML_TEXT_NODE || child->type == XML_CDATA_SECTION_NODE) && child->content) {
+            out += QLatin1Char(' ');
+            out += QString::fromUtf8(reinterpret_cast<const char *>(child->content));
+        }
+    }
+    return collapseWhitespace(out);
+}
+
+QStringList HtmlElement::textLines() const
+{
+    QStringList lines;
+    if (!m_node)
+        return lines;
+    QString current;
+    const auto flush = [&]() {
+        const QString line = collapseWhitespace(current);
+        if (!line.isEmpty())
+            lines.append(line);
+        current.clear();
+    };
+    for (const xmlNode *child = m_node->children; child; child = child->next) {
+        if ((child->type == XML_TEXT_NODE || child->type == XML_CDATA_SECTION_NODE) && child->content) {
+            current += QString::fromUtf8(reinterpret_cast<const char *>(child->content));
+        } else if (isElement(child) && nodeTagName(child) == QLatin1String("br")) {
+            flush();
+        } else if (isElement(child)) {
+            current += QLatin1Char(' ');
+            collectText(child, current);
+        }
+    }
+    flush();
+    return lines;
 }
 
 QList<HtmlElement> HtmlElement::children() const

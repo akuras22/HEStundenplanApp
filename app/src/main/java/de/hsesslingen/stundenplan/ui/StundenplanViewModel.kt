@@ -7,9 +7,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import coil.imageLoader
 import de.hsesslingen.stundenplan.BuildConfig
 import de.hsesslingen.stundenplan.data.AccentPreset
 import de.hsesslingen.stundenplan.data.LectureReminderWorker
+import de.hsesslingen.stundenplan.data.MensaDay
+import de.hsesslingen.stundenplan.data.MensaRepository
 import de.hsesslingen.stundenplan.data.NotificationHelper
 import de.hsesslingen.stundenplan.data.QisRepository
 import de.hsesslingen.stundenplan.data.SettingsStore
@@ -22,6 +25,7 @@ import de.hsesslingen.stundenplan.data.UpdateManager
 import de.hsesslingen.stundenplan.data.Weekday
 import de.hsesslingen.stundenplan.data.friendlyNetworkErrorMessage
 import de.hsesslingen.stundenplan.widget.WidgetUpdater
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -31,6 +35,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
@@ -47,6 +52,21 @@ data class PlanUiState(
     val isOffline: Boolean = false,
     val offlineSince: Long? = null,
 )
+
+/** Identifies one fetched Speiseplan: a Mensa (see MensaLocations) on one day. */
+data class MensaKey(val locationId: Int, val date: LocalDate)
+
+/** One day's Speiseplan as the Mensa tab sees it — [day] stays set while a refresh is running or
+ *  after a failed one, so the menu doesn't vanish just because the refetch didn't work. */
+data class MensaDayState(
+    val isLoading: Boolean = false,
+    val day: MensaDay? = null,
+    val error: String? = null,
+)
+
+/** [StundenplanViewModel.mensaLocationId] before DataStore has answered — distinct from null
+ *  ("nothing picked yet"), so the Mensa tab doesn't flash its location picker on every start. */
+const val MENSA_LOCATION_LOADING = -1
 
 data class UpdateUiState(
     val available: UpdateInfo? = null,
@@ -65,6 +85,7 @@ data class StudiengangPickerState(
 class StundenplanViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = QisRepository()
+    private val mensaRepository = MensaRepository()
     private val settingsStore = SettingsStore(application)
     private val updateManager = UpdateManager(application)
     private val timetableCache = TimetableCache(application)
@@ -163,6 +184,43 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     fun setBlockShowLecturer(show: Boolean) {
         viewModelScope.launch { settingsStore.setBlockShowLecturer(show) }
+    }
+
+    /** The Mensa whose Speiseplan the Mensa tab shows — null until the user picks one, or
+     *  [MENSA_LOCATION_LOADING] while it's still being read from DataStore. */
+    val mensaLocationId: StateFlow<Int?> =
+        settingsStore.mensaLocationId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MENSA_LOCATION_LOADING)
+
+    fun setMensaLocation(id: Int) {
+        viewModelScope.launch { settingsStore.setMensaLocationId(id) }
+    }
+
+    // Per-session only: the Speiseplan changes during the day (sold-out dishes get swapped), so
+    // there's no offline copy of it — a fresh app start always asks the site again.
+    private val _mensaDays = MutableStateFlow<Map<MensaKey, MensaDayState>>(emptyMap())
+    val mensaDays: StateFlow<Map<MensaKey, MensaDayState>> = _mensaDays.asStateFlow()
+
+    /** Loads [date]'s Speiseplan at [locationId] unless it's already loaded or loading — the Mensa
+     *  tab calls this for every day page it composes, including the pre-composed neighbors, which
+     *  is what makes swiping to the next day instant. [force] refetches regardless (Aktualisieren). */
+    fun loadMensaDay(locationId: Int, date: LocalDate, force: Boolean = false) {
+        val key = MensaKey(locationId, date)
+        val current = _mensaDays.value[key]
+        if (current?.isLoading == true) return
+        if (!force && current?.day != null) return
+        _mensaDays.update { it + (key to MensaDayState(isLoading = true, day = current?.day)) }
+        viewModelScope.launch {
+            val result = try {
+                MensaDayState(day = mensaRepository.fetchDay(locationId, date))
+            } catch (e: Exception) {
+                val message = friendlyNetworkErrorMessage(e, site = "Speiseplan-Seite", what = "Speiseplan")
+                // A failed refresh of a menu that's already on screen keeps showing it and only
+                // says so in a Snackbar, instead of swapping the whole page for an error.
+                if (current?.day != null) postFeedback(message)
+                MensaDayState(day = current?.day, error = message)
+            }
+            _mensaDays.update { it + (key to result) }
+        }
     }
 
     // Live per-week results — QIS shows real per-week data (empty outside term dates, room
@@ -440,7 +498,13 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     fun clearCache() {
         weekCache.clear()
         weekPrefetchInFlight.clear()
+        _mensaDays.value = emptyMap()
         viewModelScope.launch { timetableCache.clearAll() }
+        // Speiseplan photos are cached by Coil (memory + disk) — clearing those too means
+        // "Zwischenspeicher leeren" actually frees the space they take, which is most of it.
+        val imageLoader = getApplication<Application>().imageLoader
+        imageLoader.memoryCache?.clear()
+        viewModelScope.launch(Dispatchers.IO) { imageLoader.diskCache?.clear() }
         postFeedback("Zwischenspeicher geleert.")
     }
 

@@ -87,7 +87,7 @@ fun AboutScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                 AboutActionRow(
                     icon = Icons.Filled.DeleteSweep,
                     title = "Zwischenspeicher leeren",
-                    subtitle = "Löscht zwischengespeicherte Stundenpläne",
+                    subtitle = "Löscht zwischengespeicherte Stundenpläne und Speiseplan-Fotos",
                 ) {
                     viewModel.clearCache()
                 }

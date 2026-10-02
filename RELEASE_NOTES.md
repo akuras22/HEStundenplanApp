@@ -1,8 +1,4 @@
-- **Blockinhalt einstellbar**: Uhrzeit/Raum/Dozent auf den Blöcken einzeln ein-/ausblendbar.
-- **Trenner zwischen den Darstellungsoptionen**.
-- **Kalender-Export entfernt**.
-- **Benachrichtigung führt jetzt direkt zum Termin**.
-- **Test-Benachrichtigung senden**-Button.
-- **Einzelne Veranstaltung teilen**.
-- **Größeres Widget mit mehreren Terminen**.
-- **Suche nach Raum oder Dozent**.
+- **Mensa-Speiseplan**: neuer Bereich „Mensa“ (Android: dritter Tab unten, Desktop: dritte Ansicht neben Woche/Tag) mit dem Speiseplan des Studierendenwerks Stuttgart — Fotos der Gerichte, Preise, vegan/vegetarisch-Kennzeichnung.
+- **Standort wählbar**: Mensa Esslingen Flandernstraße, Stadtmitte, Göppingen oder eine der anderen Mensen des Studierendenwerks; die Wahl wird gemerkt und lässt sich über den Namen oben jederzeit wechseln.
+- **Details per Antippen**: großes Foto, Preise für Studierende/Bedienstete/Gäste, Allergene, Zusatzstoffe und Nährwerte.
+- **Gleicher Tag wie im Stundenplan**: Wer vom „Tag“ zur Mensa wechselt, sieht den Speiseplan genau dieses Tages.

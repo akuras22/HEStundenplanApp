@@ -72,6 +72,7 @@ class SettingsStore(private val context: Context) {
         val BLOCK_SHOW_TIME = booleanPreferencesKey("block_show_time")
         val BLOCK_SHOW_ROOM = booleanPreferencesKey("block_show_room")
         val BLOCK_SHOW_LECTURER = booleanPreferencesKey("block_show_lecturer")
+        val MENSA_LOCATION_ID = intPreferencesKey("mensa_location_id")
     }
 
     val selectedStudiengang: Flow<Studiengang?> = context.dataStore.data.map { prefs ->
@@ -214,6 +215,16 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setDefaultViewIsDay(isDay: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.DEFAULT_VIEW_IS_DAY] = isDay }
+    }
+
+    /** The Mensa whose Speiseplan the Mensa tab shows (a [MensaLocations] id) — null until the
+     *  user picks one, since there's no way to tell which campus they're on. */
+    val mensaLocationId: Flow<Int?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.MENSA_LOCATION_ID]?.takeIf { MensaLocations.byId(it) != null }
+    }
+
+    suspend fun setMensaLocationId(id: Int) {
+        context.dataStore.edit { prefs -> prefs[Keys.MENSA_LOCATION_ID] = id }
     }
 
     /** What shows on each event block in Woche/Tag — separate from the full detail dialog, which

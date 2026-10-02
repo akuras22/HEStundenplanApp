@@ -85,6 +85,9 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze-materials:1.7.2")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Speiseplan photos: downsampled to the size they're shown at (the site serves 1920x1080
+    // originals of ~1 MB each) and kept in a disk cache, so revisiting a day doesn't redownload them.
+    implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("org.jsoup:jsoup:1.17.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 

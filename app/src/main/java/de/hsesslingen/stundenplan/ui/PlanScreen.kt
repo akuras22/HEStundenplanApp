@@ -13,7 +13,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
@@ -46,6 +48,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
@@ -53,6 +56,7 @@ import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.ViewDay
 import androidx.compose.material.icons.outlined.ViewWeek
 import androidx.compose.material3.AlertDialog
@@ -62,6 +66,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -113,6 +118,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.hsesslingen.stundenplan.data.MensaLocations
 import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
 import de.hsesslingen.stundenplan.data.dayWindowFor
@@ -135,7 +141,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
-private enum class PlanViewMode { WEEK, DAY }
+private enum class PlanViewMode { WEEK, DAY, MENSA }
 
 /** Which fields render on each event block (Woche/Tag) — configurable in Einstellungen ▸
  *  Darstellung. Threaded via CompositionLocal rather than a parameter on every card-drawing
@@ -234,18 +240,18 @@ private fun rememberFittingSingleLineFontSize(
     }
 }
 
-private fun LocalDate.weekMonday(): LocalDate = this.with(DayOfWeek.MONDAY)
+internal fun LocalDate.weekMonday(): LocalDate = this.with(DayOfWeek.MONDAY)
 
 /** Saturday/Sunday never appear in this app (no lectures happen on weekends), so anything that
  *  lands on one snaps forward to the following Monday instead. */
-private fun LocalDate.nearestWeekday(): LocalDate = when (dayOfWeek) {
+internal fun LocalDate.nearestWeekday(): LocalDate = when (dayOfWeek) {
     DayOfWeek.SATURDAY -> plusDays(2)
     DayOfWeek.SUNDAY -> plusDays(1)
     else -> this
 }
 
-private val SHORT_DATE = DateTimeFormatter.ofPattern("dd.MM.")
-private val FULL_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+internal val SHORT_DATE = DateTimeFormatter.ofPattern("dd.MM.")
+internal val FULL_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
 // Swipe navigation is implemented as a huge pager anchored to a fixed Monday far in the past, so
 // page indices map 1:1 to real dates/weeks without ever needing negative pages.
@@ -254,15 +260,15 @@ private val PAGE_EPOCH_MONDAY: LocalDate = LocalDate.of(2000, 1, 3)
 // The day pager only ever indexes Monday..Friday — each week contributes exactly 5 pages, so
 // swiping past Friday lands straight on the next Monday, skipping the weekend entirely.
 private const val WEEKDAYS_PER_WEEK = 5
-private const val DAY_PAGE_COUNT = 10_400 * WEEKDAYS_PER_WEEK // ~200 years
+internal const val DAY_PAGE_COUNT = 10_400 * WEEKDAYS_PER_WEEK // ~200 years
 private const val WEEK_PAGE_COUNT = 10_400 // ~200 years
 
-private fun dateToDayPage(date: LocalDate): Int {
+internal fun dateToDayPage(date: LocalDate): Int {
     val weekIndex = ChronoUnit.WEEKS.between(PAGE_EPOCH_MONDAY, date.weekMonday()).toInt()
     val dayOffset = (date.dayOfWeek.value - 1).coerceIn(0, WEEKDAYS_PER_WEEK - 1)
     return weekIndex * WEEKDAYS_PER_WEEK + dayOffset
 }
-private fun dayPageToDate(page: Int): LocalDate {
+internal fun dayPageToDate(page: Int): LocalDate {
     val weekIndex = Math.floorDiv(page, WEEKDAYS_PER_WEEK)
     val dayOffset = Math.floorMod(page, WEEKDAYS_PER_WEEK)
     return PAGE_EPOCH_MONDAY.plusWeeks(weekIndex.toLong()).plusDays(dayOffset.toLong())
@@ -343,6 +349,10 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     val blockShowLecturer by viewModel.blockShowLecturer.collectAsState()
     val blockOptions = BlockDisplayOptions(showTime = blockShowTime, showRoom = blockShowRoom, showLecturer = blockShowLecturer)
     val pendingOpenDate by viewModel.pendingOpenDate.collectAsState()
+    val mensaLocationId by viewModel.mensaLocationId.collectAsState()
+    val mensaLocation = mensaLocationId?.let { MensaLocations.byId(it) }
+    var showMensaMenu by remember { mutableStateOf(false) }
+    val isMensa = resolvedViewMode == PlanViewMode.MENSA
 
     // A reminder notification (or "Test-Benachrichtigung senden") tap jumps straight to that
     // day's Tag-Ansicht — cleared right after so it doesn't keep re-triggering on recomposition.
@@ -380,7 +390,11 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val title = state.studiengang?.code ?: "Stundenplan"
+                    val title = if (isMensa) {
+                        mensaLocation?.shortName ?: "Mensa"
+                    } else {
+                        state.studiengang?.code ?: "Stundenplan"
+                    }
                     // BoxWithConstraints (not a plain weight(1f) Text) so the available width is
                     // known up front for the font-fit measurement below — a weighted Text only
                     // learns its own width during layout, too late to size itself by. Without
@@ -389,19 +403,20 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     // row's last button (Einstellungen) off-screen; an ellipsis technically fixed
                     // that but just looked broken ("Stunde…").
                     // Only worth a tap target — and a dropdown affordance — once there's more than
-                    // one Studiengang to switch between.
-                    val showFavoritesSwitcher = favorites.size > 1
+                    // one Studiengang to switch between. On the Mensa tab the title is the chosen
+                    // Mensa instead, always switchable once one has been picked at all.
+                    val showTitleSwitcher = if (isMensa) mensaLocation != null else favorites.size > 1
                     BoxWithConstraints(
                         Modifier
                             .weight(1f)
                             .let {
-                                if (showFavoritesSwitcher) it.clickable {
+                                if (showTitleSwitcher) it.clickable {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showFavoritesMenu = true
+                                    if (isMensa) showMensaMenu = true else showFavoritesMenu = true
                                 } else it
                             },
                     ) {
-                        val chevronReserve = if (showFavoritesSwitcher) 28.dp else 0.dp
+                        val chevronReserve = if (showTitleSwitcher) 28.dp else 0.dp
                         val titleFontSize = rememberFittingSingleLineFontSize(
                             text = title,
                             availableWidth = maxWidth - chevronReserve,
@@ -425,15 +440,15 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                                     maxLines = 1,
                                 )
                             }
-                            if (showFavoritesSwitcher) {
+                            if (showTitleSwitcher) {
                                 val chevronRotation by animateFloatAsState(
-                                    targetValue = if (showFavoritesMenu) 180f else 0f,
+                                    targetValue = if (showFavoritesMenu || showMensaMenu) 180f else 0f,
                                     animationSpec = tween(220, easing = FastOutSlowInEasing),
                                     label = "chevronRotation",
                                 )
                                 Icon(
                                     Icons.Filled.ArrowDropDown,
-                                    contentDescription = "Studiengang wechseln",
+                                    contentDescription = if (isMensa) "Mensa wechseln" else "Studiengang wechseln",
                                     modifier = Modifier
                                         .size(28.dp)
                                         .graphicsLayer { rotationZ = chevronRotation },
@@ -451,13 +466,36 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                                 )
                             }
                         }
+                        DropdownMenu(expanded = showMensaMenu, onDismissRequest = { showMensaMenu = false }) {
+                            MensaLocations.all.forEachIndexed { index, location ->
+                                // Divides the HS Esslingen campuses from the Studierendenwerk's
+                                // other sites, same grouping as the first-run picker.
+                                if (index > 0 && !location.atHsEsslingen && MensaLocations.all[index - 1].atHsEsslingen) {
+                                    HorizontalDivider()
+                                }
+                                DropdownMenuItem(
+                                    text = { Text(location.name, fontWeight = if (location.id == mensaLocation?.id) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = {
+                                        viewModel.setMensaLocation(location.id)
+                                        showMensaMenu = false
+                                    },
+                                )
+                            }
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Heute/Datum/Aktualisieren all act on a plan that doesn't exist yet
                         // without a chosen Studiengang — showing them as live buttons with nothing
                         // to do just invites a confusing no-op tap, so only Einstellungen (the one
                         // way to actually fix that) shows until a Studiengang is selected.
-                        if (state.studiengang != null) {
+                        if (isMensa) {
+                            if (mensaLocation != null) {
+                                GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
+                                GlassIconButton(Icons.Filled.Refresh, "Aktualisieren") {
+                                    viewModel.loadMensaDay(mensaLocation.id, selectedDate, force = true)
+                                }
+                            }
+                        } else if (state.studiengang != null) {
                             GlassIconButton(Icons.Filled.Search, "Suchen") { showSearch = true }
                             GlassIconButton(Icons.Filled.Today, "Heute") { selectedDate = LocalDate.now().nearestWeekday() }
                             GlassIconButton(Icons.Filled.EditCalendar, "Datum wählen") { showDatePicker = true }
@@ -467,7 +505,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                     }
                 }
 
-                if (state.isOffline) {
+                if (state.isOffline && !isMensa) {
                     OfflineBanner(since = state.offlineSince)
                 }
 
@@ -477,17 +515,35 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                         .fillMaxWidth(),
                 ) {
                     when {
-                        state.studiengang == null && !state.isLoading -> EmptyState(onOpenSettings)
+                        // The Mensa tab needs no Studiengang at all, so none of the plan's own
+                        // empty/loading/error states apply to it.
+                        !isMensa && state.studiengang == null && !state.isLoading -> EmptyState(onOpenSettings)
                         // Only block the whole screen on the very first load. Once a week has ever
                         // loaded, swiping to a new week fetches quietly in the background so the
                         // pager keeps swiping smoothly instead of flashing a spinner every time.
-                        state.isLoading && state.weekMonday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        !isMensa && state.isLoading && state.weekMonday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             LoadingGlyph()
                         }
-                        state.error != null -> ErrorState(state.error!!, onRetry = { viewModel.refresh() })
+                        !isMensa && state.error != null -> ErrorState(state.error!!, onRetry = { viewModel.refresh() })
                         else -> AnimatedContent(
                             targetState = resolvedViewMode,
                             transitionSpec = {
+                                // Mensa is a different place altogether, not another zoom level of
+                                // the plan — it slides in sideways from where its tab sits.
+                                if (initialState == PlanViewMode.MENSA || targetState == PlanViewMode.MENSA) {
+                                    val direction = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                                    val slideSpring = spring<IntOffset>(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    )
+                                    return@AnimatedContent (fadeIn(tween(260, easing = FastOutSlowInEasing)) +
+                                        slideInHorizontally(animationSpec = slideSpring) { w -> direction * w / 6 })
+                                        .togetherWith(
+                                            fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                                                slideOutHorizontally(animationSpec = slideSpring) { w -> -direction * w / 10 },
+                                        )
+                                        .using(SizeTransform(clip = false))
+                                }
                                 // "Tag" reads as a zoom into one day of the grid, "Woche" as
                                 // zooming back out — scale/slide direction flips with the target so
                                 // the switch feels like a fluid morph rather than a flat cross-fade.
@@ -517,7 +573,14 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                             },
                             label = "viewMode",
                         ) { mode ->
-                            if (mode == PlanViewMode.WEEK) {
+                            if (mode == PlanViewMode.MENSA) {
+                                MensaView(
+                                    viewModel = viewModel,
+                                    locationId = mensaLocationId,
+                                    selectedDate = selectedDate,
+                                    onDateSelected = { selectedDate = it },
+                                )
+                            } else if (mode == PlanViewMode.WEEK) {
                                 WeekView(
                                     events = visibleEvents,
                                     selectedDate = selectedDate,
@@ -676,11 +739,15 @@ private const val OneUiNavSelectedWashDark = 0.10f
 private const val OneUiNavSelectedWashLight = 0.89f
 
 private val OneUiNavSegmentWidth = 123.8.dp
+// With a third tab (Mensa), full-width segments would make the track ~363dp — wider than a 360dp
+// phone minus the pill's 20dp side margins. Samsung's own 3-tab bars shrink the segments the
+// same way rather than the spacing, so only the width changes; everything else stays measured.
+private val OneUiNavSegmentWidthThreeTabs = 100.dp
 private val OneUiNavSegmentHeight = 51.2.dp
 private val OneUiNavSegmentOverlap = 8.5.dp
 private val OneUiNavTrackPadding = 4.3.dp
 
-/** Floating view-mode switcher (Woche/Tag) — see the measurements above for where every value comes from. */
+/** Floating tab switcher (Woche/Tag/Mensa) — see the measurements above for where every value comes from. */
 @Composable
 private fun BottomNavPill(
     selected: PlanViewMode,
@@ -694,8 +761,8 @@ private fun BottomNavPill(
             .clip(PillShape)
             .background(if (dark) OneUiNavTrackDark else OneUiNavTrackLight)
             .padding(OneUiNavTrackPadding)
-            // Tells TalkBack these two tabs are a mutually-exclusive group, matching how a
-            // Woche/Tag switch actually behaves — pairs with Role.Tab on each item below.
+            // Tells TalkBack these tabs are a mutually-exclusive group, matching how a
+            // Woche/Tag/Mensa switch actually behaves — pairs with Role.Tab on each item below.
             .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(-OneUiNavSegmentOverlap),
     ) {
@@ -704,13 +771,22 @@ private fun BottomNavPill(
             unselectedIcon = Icons.Outlined.ViewWeek,
             label = "Woche",
             selected = selected == PlanViewMode.WEEK,
+            width = OneUiNavSegmentWidthThreeTabs,
         ) { onSelect(PlanViewMode.WEEK) }
         BottomNavItem(
             selectedIcon = Icons.Filled.ViewDay,
             unselectedIcon = Icons.Outlined.ViewDay,
             label = "Tag",
             selected = selected == PlanViewMode.DAY,
+            width = OneUiNavSegmentWidthThreeTabs,
         ) { onSelect(PlanViewMode.DAY) }
+        BottomNavItem(
+            selectedIcon = Icons.Filled.Restaurant,
+            unselectedIcon = Icons.Outlined.Restaurant,
+            label = "Mensa",
+            selected = selected == PlanViewMode.MENSA,
+            width = OneUiNavSegmentWidthThreeTabs,
+        ) { onSelect(PlanViewMode.MENSA) }
     }
 }
 
@@ -720,6 +796,7 @@ private fun BottomNavItem(
     unselectedIcon: ImageVector,
     label: String,
     selected: Boolean,
+    width: Dp = OneUiNavSegmentWidth,
     onClick: () -> Unit,
 ) {
     val dark = LocalIsDarkTheme.current
@@ -735,7 +812,7 @@ private fun BottomNavItem(
     }
     Column(
         Modifier
-            .size(OneUiNavSegmentWidth, OneUiNavSegmentHeight)
+            .size(width, OneUiNavSegmentHeight)
             .clip(PillShape)
             .background(bg)
             // selectable (not plain clickable) announces this as a tab to TalkBack, including
@@ -764,11 +841,11 @@ private fun BottomNavItem(
 }
 
 @Composable
-private fun LoadingGlyph() {
+internal fun LoadingGlyph(label: String = "Lade Stundenplan …") {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(12.dp))
-        Text("Lade Stundenplan …", style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -786,7 +863,7 @@ private fun EmptyState(onOpenSettings: () -> Unit) {
 }
 
 @Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
+internal fun ErrorState(message: String, onRetry: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
             IconBadge(Icons.Filled.WarningAmber, tint = MaterialTheme.colorScheme.error)
@@ -827,7 +904,7 @@ private fun OfflineBanner(since: Long?) {
  *  centered block covering the whole timeline, since the hour axis/day header around it are
  *  meant to keep reading as the same grid whether or not there's anything in it. */
 @Composable
-private fun EmptyScheduleBanner(text: String, modifier: Modifier = Modifier) {
+internal fun EmptyScheduleBanner(text: String, modifier: Modifier = Modifier, icon: ImageVector = Icons.Filled.EventBusy) {
     Row(
         modifier
             .clip(PillShape)
@@ -836,13 +913,13 @@ private fun EmptyScheduleBanner(text: String, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(Icons.Filled.EventBusy, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
-private fun IconBadge(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary) {
+internal fun IconBadge(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary) {
     Box(
         Modifier
             .size(72.dp)
@@ -883,9 +960,12 @@ private fun DayView(
     // highlighting a day that no longer matches what's actually shown.
     val currentSelectedDate by rememberUpdatedState(selectedDate)
 
-    // Swipe -> selectedDate.
+    // Swipe -> selectedDate. settledPage, not currentPage: currentPage also passes through every
+    // page in between while the effect below animates a multi-day jump (Fr -> Mo), and reporting
+    // those back as the new date cancelled that very animation midway — a tap on "Mo" used to
+    // land on "Di".
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
+        snapshotFlow { pagerState.settledPage }.collect { page ->
             val date = dayPageToDate(page)
             if (date != currentSelectedDate) onDateSelected(date)
         }
@@ -1116,9 +1196,11 @@ private fun WeekView(
     val currentSelectedDate by rememberUpdatedState(selectedDate)
     val currentDayOffsetInWeek by rememberUpdatedState(dayOffsetInWeek)
 
-    // Swipe -> selectedDate (keeping the same weekday offset within the new week).
+    // Swipe -> selectedDate (keeping the same weekday offset within the new week). settledPage for
+    // the same reason as in DayView: a multi-week jump ("Heute", date picker) must not report the
+    // weeks it animates through.
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
+        snapshotFlow { pagerState.settledPage }.collect { page ->
             val newMonday = weekPageToMonday(page)
             val newDate = newMonday.plusDays(currentDayOffsetInWeek.toLong())
             if (newDate != currentSelectedDate) onWeekChanged(newDate)
@@ -1272,9 +1354,10 @@ private fun WeekGrid(
     }
 }
 
-/** Unified weekday+date pill used both as the week-view header and the day-view quick switcher. */
+/** Unified weekday+date pill used as the week-view header and the day-view (and Mensa-tab) quick
+ *  switcher. */
 @Composable
-private fun DateChip(
+internal fun DateChip(
     day: Weekday,
     date: LocalDate,
     selected: Boolean,
@@ -1789,7 +1872,7 @@ fun ChangelogDialog(
 }
 
 @Composable
-private fun DetailRow(label: String, value: String?) {
+internal fun DetailRow(label: String, value: String?) {
     if (value.isNullOrBlank()) return
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -1,5 +1,7 @@
+#include "controller/MensaController.h"
 #include "controller/TimetableController.h"
 #include "core/DesktopStyle.h"
+#include "core/ImageNetworkCache.h"
 #include "core/NotificationManager.h"
 #include "core/ReminderScheduler.h"
 #include "core/SettingsStore.h"
@@ -52,6 +54,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<TimetableEvent>("stundenplan::TimetableEvent");
     qRegisterMetaType<QList<Studiengang>>("QList<stundenplan::Studiengang>");
     qRegisterMetaType<QList<TimetableEvent>>("QList<stundenplan::TimetableEvent>");
+    qRegisterMetaType<MensaDay>("stundenplan::MensaDay");
 
     auto *settings = new SettingsStore(&app);
     auto *cache = new TimetableCache();
@@ -59,14 +62,19 @@ int main(int argc, char *argv[])
     auto *updateManager = new UpdateManager(&app);
     auto *notifications = new NotificationManager(&app);
     auto *reminderScheduler = new ReminderScheduler(settings, cache, notifications, &app);
+    auto *mensaController = new MensaController(settings, &app);
 
+    // Declared before the engine so it outlives it — the engine doesn't take ownership.
+    ImageNetworkCache imageNetworkCache;
     QQmlApplicationEngine engine;
+    engine.setNetworkAccessManagerFactory(&imageNetworkCache);
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
     engine.rootContext()->setContextProperty(QStringLiteral("settingsStore"), settings);
     engine.rootContext()->setContextProperty(QStringLiteral("timetableController"), controller);
     engine.rootContext()->setContextProperty(QStringLiteral("updateManager"), updateManager);
     engine.rootContext()->setContextProperty(QStringLiteral("notificationManager"), notifications);
     engine.rootContext()->setContextProperty(QStringLiteral("reminderScheduler"), reminderScheduler);
+    engine.rootContext()->setContextProperty(QStringLiteral("mensaController"), mensaController);
 
     QObject::connect(notifications, &NotificationManager::openRequested, &engine, [&engine](const QDate &date) {
         QMetaObject::invokeMethod(engine.rootObjects().value(0), "openDate", Q_ARG(QVariant, date));

@@ -2,6 +2,7 @@
 
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 extern "C" {
 struct _xmlDoc;
@@ -31,6 +32,13 @@ public:
 
     /** Concatenated, whitespace-collapsed text content of this element and all descendants. */
     QString text() const;
+
+    /** Like text(), but only this element's own direct text nodes (Jsoup's ownText()). */
+    QString ownText() const;
+
+    /** text(), split into lines at this element's direct <br> children — each line
+     *  whitespace-collapsed, empty ones dropped. */
+    QStringList textLines() const;
 
     /** Direct element children (no text/comment nodes), in document order. */
     QList<HtmlElement> children() const;

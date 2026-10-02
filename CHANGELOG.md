@@ -2,6 +2,14 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.11.0
+
+- **Mensa-Speiseplan**: neuer Bereich „Mensa“ (Android: dritter Tab unten, Desktop: dritte Ansicht neben Woche/Tag) mit dem Speiseplan des Studierendenwerks Stuttgart — Fotos der Gerichte, Preise, vegan/vegetarisch-Kennzeichnung.
+- **Standort wählbar**: Mensa Esslingen Flandernstraße, Stadtmitte, Göppingen oder eine der anderen Mensen des Studierendenwerks; die Wahl wird gemerkt und lässt sich über den Namen oben jederzeit wechseln.
+- **Details per Antippen**: großes Foto, Preise für Studierende/Bedienstete/Gäste, Allergene, Zusatzstoffe und Nährwerte.
+- **Gleicher Tag wie im Stundenplan**: Wer vom „Tag“ zur Mensa wechselt, sieht den Speiseplan genau dieses Tages.
+- **„Zwischenspeicher leeren“** entfernt jetzt auch die gespeicherten Speiseplan-Fotos.
+
 ## Version 1.8.0
 
 - **Blockinhalt einstellbar**: Uhrzeit, Raum und Dozent auf den Veranstaltungsblöcken einzeln ein-/ausblendbar (Einstellungen ▸ Darstellung).

@@ -62,8 +62,18 @@ qt_add_executable(hestundenplan-desktop
     src/core/ReminderScheduler.cpp
     src/core/DesktopStyle.h
     src/core/DesktopStyle.cpp
+    src/core/MensaModels.h
+    src/core/MensaModels.cpp
+    src/core/MensaParser.h
+    src/core/MensaParser.cpp
+    src/core/MensaRepository.h
+    src/core/MensaRepository.cpp
+    src/core/ImageNetworkCache.h
+    src/core/ImageNetworkCache.cpp
     src/controller/TimetableController.h
     src/controller/TimetableController.cpp
+    src/controller/MensaController.h
+    src/controller/MensaController.cpp
 )
 
 set_source_files_properties(qml/components/AppTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -79,6 +89,7 @@ qt_add_qml_module(hestundenplan-desktop
         qml/PlanPage.qml
         qml/WeekGridView.qml
         qml/DayGridView.qml
+        qml/MensaView.qml
         qml/components/EventBlock.qml
         qml/components/NowLine.qml
         qml/components/DateChip.qml
@@ -92,10 +103,14 @@ qt_add_qml_module(hestundenplan-desktop
         qml/components/PrefRow.qml
         qml/components/AppSheet.qml
         qml/components/WindowFrame.qml
+        qml/components/MealCard.qml
+        qml/components/MealPhoto.qml
+        qml/components/LabelPill.qml
         qml/dialogs/EventDetailSheet.qml
         qml/dialogs/SearchDialog.qml
         qml/dialogs/UpdateDialog.qml
         qml/dialogs/ChangelogDialog.qml
+        qml/dialogs/MealDetailSheet.qml
         qml/settings/SettingsHubPage.qml
         qml/settings/StudiengaengePage.qml
         qml/settings/NotificationsPage.qml
