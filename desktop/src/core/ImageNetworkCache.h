@@ -6,9 +6,10 @@ namespace stundenplan {
 
 /**
  * Gives the QML engine's network access (only ever used for remote Image sources — the
- * Speiseplan photos) a disk cache under ~/.cache, so revisiting a day doesn't redownload its
- * ~1 MB photos. The photo server sends no Cache-Control/Expires headers, and its URLs are already
- * versioned ("?v=1"), so cached copies are used without asking the server again.
+ * Speiseplan photos and the room maps' OpenStreetMap tiles) a disk cache under ~/.cache, so
+ * revisiting a day doesn't redownload its ~1 MB photos. The photo server sends no
+ * Cache-Control/Expires headers, and its URLs are already versioned ("?v=1"), so cached copies
+ * are used without asking the server again; map tiles change rarely enough for the same.
  */
 class ImageNetworkCache : public QQmlNetworkAccessManagerFactory
 {

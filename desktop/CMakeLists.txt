@@ -70,10 +70,20 @@ qt_add_executable(hestundenplan-desktop
     src/core/MensaRepository.cpp
     src/core/ImageNetworkCache.h
     src/core/ImageNetworkCache.cpp
+    src/core/CampusLocations.h
+    src/core/CampusLocations.cpp
+    src/core/TransitParser.h
+    src/core/TransitParser.cpp
+    src/core/TransitRepository.h
+    src/core/TransitRepository.cpp
+    src/core/BackgroundService.h
+    src/core/BackgroundService.cpp
     src/controller/TimetableController.h
     src/controller/TimetableController.cpp
     src/controller/MensaController.h
     src/controller/MensaController.cpp
+    src/controller/TransitController.h
+    src/controller/TransitController.cpp
 )
 
 set_source_files_properties(qml/components/AppTheme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -90,6 +100,7 @@ qt_add_qml_module(hestundenplan-desktop
         qml/WeekGridView.qml
         qml/DayGridView.qml
         qml/MensaView.qml
+        qml/TransitView.qml
         qml/components/EventBlock.qml
         qml/components/NowLine.qml
         qml/components/DateChip.qml
@@ -106,11 +117,13 @@ qt_add_qml_module(hestundenplan-desktop
         qml/components/MealCard.qml
         qml/components/MealPhoto.qml
         qml/components/LabelPill.qml
+        qml/components/MiniMap.qml
         qml/dialogs/EventDetailSheet.qml
         qml/dialogs/SearchDialog.qml
         qml/dialogs/UpdateDialog.qml
         qml/dialogs/ChangelogDialog.qml
         qml/dialogs/MealDetailSheet.qml
+        qml/dialogs/StopSearchSheet.qml
         qml/settings/SettingsHubPage.qml
         qml/settings/StudiengaengePage.qml
         qml/settings/NotificationsPage.qml
@@ -118,6 +131,7 @@ qt_add_qml_module(hestundenplan-desktop
         qml/settings/AboutPage.qml
     RESOURCES
         icons/org.hsesslingen.stundenplan.desktop.svg
+        icons/bus-symbolic.svg
 )
 
 # The GNOME look's Qt Quick Controls style (see DesktopStyle.h): a plain QML module compiled into

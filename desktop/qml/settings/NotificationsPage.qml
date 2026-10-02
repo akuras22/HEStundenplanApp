@@ -106,6 +106,48 @@ PrefPage {
     }
 
     PrefGroup {
+        title: qsTr("Bei geschlossenem Fenster")
+        visible: settingsStore.remindersEnabled
+
+        PrefRow {
+            first: true
+            text: qsTr("Im Hintergrund weiterlaufen")
+            subtitle: qsTr("Erinnerungen kommen auch, wenn das Fenster zu ist. Wieder öffnen über das Anwendungsmenü, ganz beenden mit Strg+Q oder hier unten.")
+            activatable: true
+            onClicked: settingsStore.runInBackground = !settingsStore.runInBackground
+
+            Controls.Switch {
+                checked: settingsStore.runInBackground
+                onToggled: settingsStore.runInBackground = checked
+            }
+        }
+        PrefRow {
+            last: !settingsStore.runInBackground
+            enabled: settingsStore.runInBackground
+            text: qsTr("Beim Anmelden starten")
+            subtitle: qsTr("Startet unsichtbar im Hintergrund, damit Erinnerungen ab dem Login kommen")
+            activatable: true
+            onClicked: settingsStore.autostart = !settingsStore.autostart
+
+            Controls.Switch {
+                checked: settingsStore.autostart && settingsStore.runInBackground
+                onToggled: settingsStore.autostart = checked
+            }
+        }
+        PrefRow {
+            last: true
+            visible: settingsStore.runInBackground
+            text: qsTr("App ganz beenden")
+            subtitle: qsTr("Bis zum nächsten Start keine Erinnerungen")
+
+            Controls.Button {
+                text: qsTr("Beenden")
+                onClicked: backgroundService.quit()
+            }
+        }
+    }
+
+    PrefGroup {
         visible: settingsStore.remindersEnabled
 
         PrefRow {

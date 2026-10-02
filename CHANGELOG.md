@@ -2,6 +2,14 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.12.0
+
+- **Abfahrten**: neuer Bereich mit Live-Abfahrten von Bus und Bahn (VVS) — Verspätungen, Ausfälle, Gleis/Steig und Störungshinweise. Startet an der Haltestelle deines Campus (Hochschulzentrum, Hochschule, Göppingen, Bahnhöfe), jede andere VVS-Haltestelle lässt sich suchen.
+- **Nach der Vorlesung**: zeigt auf Wunsch die Abfahrten ab dem Ende deiner letzten Vorlesung heute.
+- **Wo ist der Raum?** Im Detail einer Veranstaltung stehen jetzt Campus, Gebäude und Etage, dazu eine kleine Karte (OpenStreetMap) und „In Karten öffnen“ für den Weg dorthin.
+- **Desktop: läuft im Hintergrund weiter** (Einstellungen ▸ Benachrichtigungen): Erinnerungen kommen auch bei geschlossenem Fenster, auf Wunsch schon ab dem Anmelden. Wieder öffnen über das Anwendungsmenü, beenden mit Strg+Q.
+- **Desktop: nur noch eine Instanz** — ein zweiter Start holt das vorhandene Fenster nach vorne.
+
 ## Version 1.11.0
 
 - **Mensa-Speiseplan**: neuer Bereich „Mensa“ (Android: dritter Tab unten, Desktop: dritte Ansicht neben Woche/Tag) mit dem Speiseplan des Studierendenwerks Stuttgart — Fotos der Gerichte, Preise, vegan/vegetarisch-Kennzeichnung.
@@ -9,6 +17,7 @@ Hier steht in verständlicher Sprache, was sich von Version zu Version geändert
 - **Details per Antippen**: großes Foto, Preise für Studierende/Bedienstete/Gäste, Allergene, Zusatzstoffe und Nährwerte.
 - **Gleicher Tag wie im Stundenplan**: Wer vom „Tag“ zur Mensa wechselt, sieht den Speiseplan genau dieses Tages.
 - **„Zwischenspeicher leeren“** entfernt jetzt auch die gespeicherten Speiseplan-Fotos.
+- **Behoben**: Tippen auf einen weiter entfernten Tag (z. B. von Freitag auf „Mo“) landete manchmal auf einem Tag dazwischen.
 
 ## Version 1.8.0
 

@@ -9,7 +9,8 @@
     <p>
       Zeigt den live von der QIS/LSF-Seite der Hochschule Esslingen geladenen Stundenplan in
       Wochen- und Tagesansicht, mit Suche und Vorlesungs-Erinnerungen, dazu den Mensa-Speiseplan
-      des Studierendenwerks Stuttgart mit Fotos, Preisen und Allergenen. Passt sich dem Desktop an:
+      des Studierendenwerks Stuttgart mit Fotos, Preisen und Allergenen, Live-Abfahrten von Bus
+      und Bahn (VVS) und zu jedem Raum Gebäude, Etage und Karte. Passt sich dem Desktop an:
       unter KDE Plasma im KDE-Look, unter GNOME und anderen Linux-Desktops im GNOME-Look.
     </p>
   </description>

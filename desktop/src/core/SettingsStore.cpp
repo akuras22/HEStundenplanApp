@@ -14,11 +14,26 @@ const char *kGroupHidden = "HiddenEvents";
 const char *kGroupNotifications = "Notifications";
 const char *kGroupAppearance = "Appearance";
 const char *kGroupMensa = "Mensa";
+const char *kGroupTransit = "Transit";
+constexpr int kMaxRecentStops = 5;
 const char *kFieldSep = "||";
 
 QString encodeStudiengang(const Studiengang &s)
 {
     return s.code + QLatin1String(kFieldSep) + s.abstgvnr + QLatin1String(kFieldSep) + s.parallelid;
+}
+
+QString encodeTransitStop(const TransitStop &s)
+{
+    return s.id + QLatin1String(kFieldSep) + s.name + QLatin1String(kFieldSep) + s.shortName;
+}
+
+std::optional<TransitStop> decodeTransitStop(const QString &raw)
+{
+    const auto parts = raw.split(QLatin1String(kFieldSep));
+    if (parts.size() != 3 || parts[0].isEmpty())
+        return std::nullopt;
+    return TransitStop{parts[0], parts[1], parts[2]};
 }
 
 std::optional<Studiengang> decodeStudiengang(const QString &raw)
@@ -277,6 +292,79 @@ void SettingsStore::setMensaLocationId(int id)
     g.writeEntry("locationId", id);
     g.sync();
     Q_EMIT mensaLocationIdChanged();
+}
+
+std::optional<TransitStop> SettingsStore::transitStop() const
+{
+    return decodeTransitStop(group(QString::fromLatin1(kGroupTransit)).readEntry("stop"));
+}
+
+void SettingsStore::setTransitStop(const TransitStop &stop, bool isPreset)
+{
+    auto g = group(QString::fromLatin1(kGroupTransit));
+    g.writeEntry("stop", encodeTransitStop(stop));
+    if (!isPreset) {
+        QStringList recents{encodeTransitStop(stop)};
+        for (const auto &recent : recentTransitStops()) {
+            if (recent.id != stop.id && recents.size() < kMaxRecentStops)
+                recents.append(encodeTransitStop(recent));
+        }
+        g.writeEntry("recent", recents);
+    }
+    g.sync();
+    Q_EMIT transitStopChanged();
+}
+
+QList<TransitStop> SettingsStore::recentTransitStops() const
+{
+    QList<TransitStop> result;
+    for (const auto &raw : group(QString::fromLatin1(kGroupTransit)).readEntry("recent", QStringList())) {
+        if (auto stop = decodeTransitStop(raw))
+            result.append(*stop);
+    }
+    return result;
+}
+
+bool SettingsStore::runInBackground() const
+{
+    return group(QString::fromLatin1(kGroupNotifications)).readEntry("runInBackground", false);
+}
+
+void SettingsStore::setRunInBackground(bool enabled)
+{
+    if (enabled == runInBackground())
+        return;
+    auto g = group(QString::fromLatin1(kGroupNotifications));
+    g.writeEntry("runInBackground", enabled);
+    g.sync();
+    Q_EMIT runInBackgroundChanged();
+}
+
+bool SettingsStore::autostart() const
+{
+    return group(QString::fromLatin1(kGroupNotifications)).readEntry("autostart", false);
+}
+
+void SettingsStore::setAutostart(bool enabled)
+{
+    if (enabled == autostart())
+        return;
+    auto g = group(QString::fromLatin1(kGroupNotifications));
+    g.writeEntry("autostart", enabled);
+    g.sync();
+    Q_EMIT autostartChanged();
+}
+
+bool SettingsStore::backgroundHintShown() const
+{
+    return group(QString::fromLatin1(kGroupNotifications)).readEntry("backgroundHintShown", false);
+}
+
+void SettingsStore::setBackgroundHintShown(bool shown)
+{
+    auto g = group(QString::fromLatin1(kGroupNotifications));
+    g.writeEntry("backgroundHintShown", shown);
+    g.sync();
 }
 
 } // namespace stundenplan

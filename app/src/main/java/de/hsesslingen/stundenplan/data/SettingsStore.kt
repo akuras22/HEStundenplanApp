@@ -43,6 +43,15 @@ private fun decodeStudiengang(raw: String): Studiengang? {
     return if (parts.size == 3) Studiengang(code = parts[0], abstgvnr = parts[1], parallelid = parts[2]) else null
 }
 
+private const val MAX_RECENT_STOPS = 5
+
+private fun encodeTransitStop(s: TransitStop) = "${s.id}$STUDIENGANG_FIELD_SEP${s.name}$STUDIENGANG_FIELD_SEP${s.shortName}"
+
+private fun decodeTransitStop(raw: String): TransitStop? {
+    val parts = raw.split(STUDIENGANG_FIELD_SEP)
+    return if (parts.size == 3 && parts[0].isNotBlank()) TransitStop(id = parts[0], name = parts[1], shortName = parts[2]) else null
+}
+
 /**
  * Persists user settings — the chosen/favorite Studiengänge, which recurring event groups the user
  * hid, and small bookkeeping values (last update check, reminders toggle) — never any timetable
@@ -73,6 +82,8 @@ class SettingsStore(private val context: Context) {
         val BLOCK_SHOW_ROOM = booleanPreferencesKey("block_show_room")
         val BLOCK_SHOW_LECTURER = booleanPreferencesKey("block_show_lecturer")
         val MENSA_LOCATION_ID = intPreferencesKey("mensa_location_id")
+        val TRANSIT_STOP = stringPreferencesKey("transit_stop")
+        val TRANSIT_RECENT_STOPS = stringPreferencesKey("transit_recent_stops")
     }
 
     val selectedStudiengang: Flow<Studiengang?> = context.dataStore.data.map { prefs ->
@@ -225,6 +236,29 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setMensaLocationId(id: Int) {
         context.dataStore.edit { prefs -> prefs[Keys.MENSA_LOCATION_ID] = id }
+    }
+
+    /** The stop the Abfahrten tab shows departures for — null until one is picked. */
+    val transitStop: Flow<TransitStop?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.TRANSIT_STOP]?.let(::decodeTransitStop)
+    }
+
+    /** Stops picked through the search (newest first, at most [MAX_RECENT_STOPS]), offered again
+     *  in the stop dropdown next to the campus presets. */
+    val recentTransitStops: Flow<List<TransitStop>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.TRANSIT_RECENT_STOPS].orEmpty().lines().mapNotNull(::decodeTransitStop)
+    }
+
+    suspend fun setTransitStop(stop: TransitStop) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.TRANSIT_STOP] = encodeTransitStop(stop)
+            if (TransitStops.presets.none { it.stop.id == stop.id }) {
+                val recents = prefs[Keys.TRANSIT_RECENT_STOPS].orEmpty().lines().mapNotNull(::decodeTransitStop)
+                prefs[Keys.TRANSIT_RECENT_STOPS] = (listOf(stop) + recents.filterNot { it.id == stop.id })
+                    .take(MAX_RECENT_STOPS)
+                    .joinToString("\n", transform = ::encodeTransitStop)
+            }
+        }
     }
 
     /** What shows on each event block in Woche/Tag — separate from the full detail dialog, which

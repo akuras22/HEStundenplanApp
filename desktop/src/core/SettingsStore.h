@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Models.h"
+#include "TransitParser.h"
 #include <KConfigGroup>
 #include <KSharedConfig>
 #include <QObject>
@@ -30,6 +31,8 @@ class SettingsStore : public QObject
     Q_PROPERTY(QVariantList reminderLeadMinutes READ reminderLeadMinutes WRITE setReminderLeadMinutes NOTIFY
                    reminderLeadMinutesChanged)
     Q_PROPERTY(int mensaLocationId READ mensaLocationId WRITE setMensaLocationId NOTIFY mensaLocationIdChanged)
+    Q_PROPERTY(bool runInBackground READ runInBackground WRITE setRunInBackground NOTIFY runInBackgroundChanged)
+    Q_PROPERTY(bool autostart READ autostart WRITE setAutostart NOTIFY autostartChanged)
 
 public:
     explicit SettingsStore(QObject *parent = nullptr);
@@ -74,6 +77,22 @@ public:
     int mensaLocationId() const;
     void setMensaLocationId(int id);
 
+    /** Keep running (for reminders) once the window is closed — see BackgroundService. */
+    bool runInBackground() const;
+    void setRunInBackground(bool enabled);
+    /** Start hidden at login (only together with runInBackground). */
+    bool autostart() const;
+    void setAutostart(bool enabled);
+    bool backgroundHintShown() const;
+    void setBackgroundHintShown(bool shown);
+
+    /** The stop the Abfahrten view shows — nullopt until one is picked. */
+    std::optional<TransitStop> transitStop() const;
+    /** Also remembers `stop` among the recent ones when it isn't a campus preset. */
+    void setTransitStop(const TransitStop &stop, bool isPreset);
+    /** Stops picked through the search, newest first. */
+    QList<TransitStop> recentTransitStops() const;
+
 Q_SIGNALS:
     void defaultViewIsDayChanged();
     void blockShowTimeChanged();
@@ -85,6 +104,9 @@ Q_SIGNALS:
     void hiddenEventKeysChanged();
     void selectedStudiengangChanged();
     void mensaLocationIdChanged();
+    void transitStopChanged();
+    void runInBackgroundChanged();
+    void autostartChanged();
 
 private:
     KConfigGroup group(const QString &name) const;

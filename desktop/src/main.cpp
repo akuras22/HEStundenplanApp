@@ -1,5 +1,7 @@
 #include "controller/MensaController.h"
 #include "controller/TimetableController.h"
+#include "controller/TransitController.h"
+#include "core/BackgroundService.h"
 #include "core/DesktopStyle.h"
 #include "core/ImageNetworkCache.h"
 #include "core/NotificationManager.h"
@@ -9,8 +11,10 @@
 #include "core/UpdateManager.h"
 
 #include <KAboutData>
+#include <KDBusService>
 #include <KLocalizedContext>
 #include <KLocalizedString>
+#include <QCommandLineParser>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
@@ -48,6 +52,19 @@ int main(int argc, char *argv[])
     aboutData.setDesktopFileName(QStringLiteral("org.hsesslingen.stundenplan.desktop"));
     KAboutData::setApplicationData(aboutData);
 
+    QCommandLineParser parser;
+    aboutData.setupCommandLine(&parser);
+    const QCommandLineOption backgroundOption(QStringLiteral("background"),
+                                              i18n("Ohne Fenster starten, nur für Erinnerungen (Autostart)"));
+    parser.addOption(backgroundOption);
+    parser.process(app);
+    aboutData.processCommandLine(&parser);
+    const bool startHidden = parser.isSet(backgroundOption);
+
+    // One instance only — launching the app again (e.g. from the app grid while it runs in the
+    // background) hands over to the running one, which shows its window, and this one exits here.
+    KDBusService dbusService(KDBusService::Unique);
+
     using namespace stundenplan;
 
     qRegisterMetaType<Studiengang>("stundenplan::Studiengang");
@@ -63,6 +80,8 @@ int main(int argc, char *argv[])
     auto *notifications = new NotificationManager(&app);
     auto *reminderScheduler = new ReminderScheduler(settings, cache, notifications, &app);
     auto *mensaController = new MensaController(settings, &app);
+    auto *transitController = new TransitController(settings, controller, &app);
+    auto *backgroundService = new BackgroundService(settings, notifications, &app);
 
     // Declared before the engine so it outlives it — the engine doesn't take ownership.
     ImageNetworkCache imageNetworkCache;
@@ -75,6 +94,9 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("notificationManager"), notifications);
     engine.rootContext()->setContextProperty(QStringLiteral("reminderScheduler"), reminderScheduler);
     engine.rootContext()->setContextProperty(QStringLiteral("mensaController"), mensaController);
+    engine.rootContext()->setContextProperty(QStringLiteral("transitController"), transitController);
+    engine.rootContext()->setContextProperty(QStringLiteral("backgroundService"), backgroundService);
+    engine.rootContext()->setContextProperty(QStringLiteral("startHidden"), startHidden);
 
     QObject::connect(notifications, &NotificationManager::openRequested, &engine, [&engine](const QDate &date) {
         QMetaObject::invokeMethod(engine.rootObjects().value(0), "openDate", Q_ARG(QVariant, date));
@@ -96,6 +118,12 @@ int main(int argc, char *argv[])
     engine.loadFromModule("de.hsesslingen.stundenplan.desktop", "Main");
     if (engine.rootObjects().isEmpty())
         return -1;
+
+    QObject::connect(&dbusService, &KDBusService::activateRequested, &engine, [&engine](const QStringList &arguments, const QString &) {
+        // The autostart entry firing while the app already runs mustn't pop the window up.
+        if (!arguments.contains(QStringLiteral("--background")))
+            QMetaObject::invokeMethod(engine.rootObjects().value(0), "showFromBackground");
+    });
 
     return app.exec();
 }

@@ -13,3 +13,8 @@ Sound=
 Name=Test-Benachrichtigung
 Comment=Manuell ausgelöste Test-Benachrichtigung aus den Einstellungen
 Action=Popup
+
+[Event/runningInBackground]
+Name=Läuft im Hintergrund
+Comment=Hinweis beim ersten Schließen des Fensters, dass Erinnerungen weiterlaufen
+Action=Popup

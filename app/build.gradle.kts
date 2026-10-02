@@ -95,4 +95,6 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jsoup:jsoup:1.17.2")
+    // android.jar only has stubs of org.json; the VVS parser tests need the real thing.
+    testImplementation("org.json:json:20240303")
 }

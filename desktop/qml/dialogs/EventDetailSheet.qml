@@ -57,6 +57,47 @@ AppSheet {
             }
         }
 
+        // "Wo ist das?" — campus, building and floor of the room, on a small map.
+        ColumnLayout {
+            id: locationSection
+            readonly property var location: timetableController.roomLocation(root.eventData.room || "")
+            Layout.fillWidth: true
+            visible: !!location.buildingName
+            spacing: Kirigami.Units.smallSpacing
+
+            Controls.Label {
+                Layout.fillWidth: true
+                text: qsTr("Wo ist das?")
+                font.bold: true
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                text: [locationSection.location.buildingName, locationSection.location.floorLabel].filter(part => !!part).join(" · ")
+                wrapMode: Text.Wrap
+            }
+            Controls.Label {
+                Layout.fillWidth: true
+                text: (locationSection.location.campusName || "") + " · " + (locationSection.location.address || "")
+                      + (locationSection.location.approximate ? qsTr(" (ungefähre Lage)") : "")
+                color: AppTheme.disabledTextColor
+                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                wrapMode: Text.Wrap
+            }
+            MiniMap {
+                Layout.fillWidth: true
+                // Only loads tiles once there's actually a location to show.
+                visible: locationSection.visible
+                latitude: locationSection.location.latitude || 0
+                longitude: locationSection.location.longitude || 0
+                mapUrl: locationSection.location.mapUrl || ""
+            }
+            Controls.Button {
+                icon.name: AppTheme.gnome ? "mark-location-symbolic" : "mark-location"
+                text: qsTr("In Karte öffnen")
+                onClicked: Qt.openUrlExternally(locationSection.location.mapUrl)
+            }
+        }
+
         Kirigami.Separator { Layout.fillWidth: true }
 
         RowLayout {

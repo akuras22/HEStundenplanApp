@@ -25,6 +25,9 @@ protected:
     {
         QNetworkRequest request(originalRequest);
         request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
+        // OpenStreetMap's tile usage policy asks every app to identify itself (the room maps load
+        // their tiles through here too); a library's generic User-Agent gets blocked.
+        request.setRawHeader("User-Agent", "HEStundenplan-desktop/" APP_VERSION_NAME " (+https://github.com/akuras22/HEStundenplanApp)");
         return QNetworkAccessManager::createRequest(op, request, outgoingData);
     }
 };

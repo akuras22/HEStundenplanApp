@@ -1,5 +1,6 @@
 #include "TimetableController.h"
 
+#include "core/CampusLocations.h"
 #include "core/NextEvent.h"
 #include "core/OverlapLayout.h"
 #include "core/QisRepository.h"
@@ -313,6 +314,42 @@ void TimetableController::setErrorMessage(const QString &message)
 {
     m_errorMessage = message;
     Q_EMIT errorMessageChanged();
+}
+
+QVariantMap TimetableController::roomLocation(const QString &room) const
+{
+    const auto location = CampusLocations::locateRoom(room);
+    if (!location)
+        return {};
+    QVariantMap m;
+    m[QStringLiteral("room")] = location->room;
+    m[QStringLiteral("campusName")] = location->campusName;
+    m[QStringLiteral("buildingName")] = location->buildingName;
+    m[QStringLiteral("floorLabel")] = location->floorLabel;
+    m[QStringLiteral("address")] = location->address;
+    m[QStringLiteral("latitude")] = location->latitude;
+    m[QStringLiteral("longitude")] = location->longitude;
+    m[QStringLiteral("approximate")] = location->approximate;
+    m[QStringLiteral("mapUrl")] = CampusLocations::osmWebUrl(location->latitude, location->longitude);
+    return m;
+}
+
+int TimetableController::todaysLastLectureEndMinutes() const
+{
+    const auto sg = currentStudiengang();
+    if (!sg)
+        return -1;
+    const QDate today = QDate::currentDate();
+    const auto cached = m_cache->get(*sg, today.addDays(1 - today.dayOfWeek()));
+    if (!cached)
+        return -1;
+    const QSet<QString> hidden = m_settings->hiddenEventKeys();
+    int latest = -1;
+    for (const auto &event : cached->events) {
+        if (event.appliesOn(today) && !hidden.contains(event.groupKey()))
+            latest = std::max(latest, event.endMinutes);
+    }
+    return latest;
 }
 
 } // namespace stundenplan

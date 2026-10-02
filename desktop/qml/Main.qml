@@ -12,6 +12,9 @@ Kirigami.ApplicationWindow {
            ? timetableController.selectedStudiengang.code
            : qsTr("Stundenplan")
 
+    // "--background" (the autostart entry): no window until a reminder or a relaunch asks for it.
+    visible: !startHidden
+
     width: Kirigami.Units.gridUnit * 45
     height: Kirigami.Units.gridUnit * 32
     minimumWidth: Kirigami.Units.gridUnit * 20
@@ -46,7 +49,28 @@ Kirigami.ApplicationWindow {
     pageStack.globalToolBar.style: AppTheme.gnome ? Kirigami.ApplicationHeaderStyle.None
                                                   : Kirigami.ApplicationHeaderStyle.Auto
 
+    /** Brings the window back — also after it was closed while running in the background. */
+    function showFromBackground() {
+        if (root.visibility === Window.Minimized)
+            root.showNormal()
+        else
+            root.show()
+        root.raise()
+        root.requestActivate()
+    }
+
+    // With "Im Hintergrund weiterlaufen" on, closing only hides the window (see BackgroundService).
+    onClosing: backgroundService.windowClosed()
+
+    // A real quit, also when closing the window would just send the app to the background.
+    Shortcut {
+        sequences: [StandardKey.Quit]
+        context: Qt.ApplicationShortcut
+        onActivated: Qt.quit()
+    }
+
     function openDate(date) {
+        root.showFromBackground()
         planPage.showDayView(date)
         while (pageStack.depth > 1)
             pageStack.pop()

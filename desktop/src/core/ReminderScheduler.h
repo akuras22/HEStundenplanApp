@@ -13,9 +13,10 @@ class NotificationManager;
 class QisRepository;
 
 /**
- * Polls every WORK_INTERVAL_MINUTES while the app is running (there is no KDE equivalent of
- * Android's WorkManager background execution while fully closed — see the plan's "Out of scope"
- * note) and posts lecture-reminder notifications. Ported from LectureReminderWorker.kt.
+ * Polls every WORK_INTERVAL_MINUTES while the app is running — with "Im Hintergrund
+ * weiterlaufen" on, also after its window was closed (see BackgroundService); there's no
+ * equivalent of Android's WorkManager for a fully quit app — and posts lecture-reminder
+ * notifications. Ported from LectureReminderWorker.kt.
  */
 class ReminderScheduler : public QObject
 {

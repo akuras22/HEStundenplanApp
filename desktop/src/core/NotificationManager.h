@@ -18,6 +18,9 @@ public:
 
     Q_INVOKABLE void notifyTest();
 
+    /** One-time hint after the window was first closed with "Im Hintergrund weiterlaufen" on. */
+    void notifyRunningInBackground();
+
 Q_SIGNALS:
     void openRequested(const QDate &date);
 };

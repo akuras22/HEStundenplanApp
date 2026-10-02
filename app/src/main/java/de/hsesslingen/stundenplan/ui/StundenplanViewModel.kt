@@ -13,6 +13,10 @@ import de.hsesslingen.stundenplan.data.AccentPreset
 import de.hsesslingen.stundenplan.data.LectureReminderWorker
 import de.hsesslingen.stundenplan.data.MensaDay
 import de.hsesslingen.stundenplan.data.MensaRepository
+import de.hsesslingen.stundenplan.data.Departure
+import de.hsesslingen.stundenplan.data.TransitRepository
+import de.hsesslingen.stundenplan.data.TransitStop
+import de.hsesslingen.stundenplan.data.TransitStops
 import de.hsesslingen.stundenplan.data.NotificationHelper
 import de.hsesslingen.stundenplan.data.QisRepository
 import de.hsesslingen.stundenplan.data.SettingsStore
@@ -33,11 +37,14 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
@@ -68,6 +75,20 @@ data class MensaDayState(
  *  ("nothing picked yet"), so the Mensa tab doesn't flash its location picker on every start. */
 const val MENSA_LOCATION_LOADING = -1
 
+/** The Abfahrten tab's departure board for one stop, from now ([at] == null) or from a set time. */
+data class TransitUiState(
+    val stop: TransitStop? = null,
+    val at: LocalDateTime? = null,
+    val departures: List<Departure> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    /** When [departures] was fetched (epoch millis) — shown as "Stand 14:52". */
+    val updatedAt: Long? = null,
+)
+
+/** [StundenplanViewModel.transitStop] before DataStore has answered, see [MENSA_LOCATION_LOADING]. */
+val TRANSIT_STOP_LOADING = TransitStop(id = "", name = "", shortName = "")
+
 data class UpdateUiState(
     val available: UpdateInfo? = null,
 )
@@ -86,6 +107,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     private val repository = QisRepository()
     private val mensaRepository = MensaRepository()
+    private val transitRepository = TransitRepository()
     private val settingsStore = SettingsStore(application)
     private val updateManager = UpdateManager(application)
     private val timetableCache = TimetableCache(application)
@@ -221,6 +243,75 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
             }
             _mensaDays.update { it + (key to result) }
         }
+    }
+
+    /** The stop the Abfahrten tab shows: the one picked, else the campus stop matching the chosen
+     *  Mensa, else null (the tab then asks). [TRANSIT_STOP_LOADING] while DataStore loads. */
+    val transitStop: StateFlow<TransitStop?> =
+        combine(settingsStore.transitStop, settingsStore.mensaLocationId) { stop, mensaId ->
+            stop ?: TransitStops.forMensaLocation(mensaId)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TRANSIT_STOP_LOADING)
+
+    val recentTransitStops: StateFlow<List<TransitStop>> =
+        settingsStore.recentTransitStops.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun setTransitStop(stop: TransitStop) {
+        viewModelScope.launch { settingsStore.setTransitStop(stop) }
+    }
+
+    private val _transitState = MutableStateFlow(TransitUiState())
+    val transitState: StateFlow<TransitUiState> = _transitState.asStateFlow()
+
+    /** (Re)loads the departure board of [stop] from now, or from [at]. Keeps the previous board on
+     *  screen while refreshing the same stop/time, so the 60-second auto-refresh doesn't flicker. */
+    fun loadDepartures(stop: TransitStop, at: LocalDateTime?) {
+        val current = _transitState.value
+        val sameBoard = current.stop?.id == stop.id && current.at == at
+        _transitState.value = if (sameBoard) {
+            current.copy(isLoading = true)
+        } else {
+            TransitUiState(stop = stop, at = at, isLoading = true)
+        }
+        viewModelScope.launch {
+            val result = try {
+                val departures = transitRepository.departures(stop, at)
+                TransitUiState(stop = stop, at = at, departures = departures, updatedAt = System.currentTimeMillis())
+            } catch (e: Exception) {
+                val previous = _transitState.value
+                TransitUiState(
+                    stop = stop,
+                    at = at,
+                    departures = if (sameBoard) previous.departures else emptyList(),
+                    updatedAt = if (sameBoard) previous.updatedAt else null,
+                    error = friendlyNetworkErrorMessage(e, site = "VVS-Auskunft", what = "Abfahrten"),
+                )
+            }
+            // A slower answer for a stop/time the user has since switched away from is dropped.
+            val latest = _transitState.value
+            if (latest.stop?.id == stop.id && latest.at == at) _transitState.value = result
+        }
+    }
+
+    /** Header "Aktualisieren" on the Abfahrten tab: reloads whatever board is showing. */
+    fun refreshDepartures() {
+        val current = _transitState.value
+        current.stop?.let { loadDepartures(it, current.at) }
+    }
+
+    /** VVS stop search for the "Andere Haltestelle" dialog; empty on errors (the dialog says so). */
+    suspend fun searchTransitStops(query: String): Result<List<TransitStop>> =
+        runCatching { transitRepository.searchStops(query) }
+
+    /** When today's last lecture ends (hidden groups left out), for the Abfahrten tab's "nach der
+     *  Vorlesung" shortcut — null when today's week isn't loaded or today has nothing (left). */
+    fun todaysLastLectureEnd(): LocalTime? {
+        val today = LocalDate.now()
+        val events = weekCache[today.with(DayOfWeek.MONDAY)] ?: return null
+        val hidden = hiddenGroupKeys.value
+        val endMinutes = events
+            .filter { it.appliesOn(today) && it.groupKey !in hidden }
+            .maxOfOrNull { it.endMinutes } ?: return null
+        return LocalTime.of(endMinutes / 60, endMinutes % 60)
     }
 
     // Live per-week results — QIS shows real per-week data (empty outside term dates, room

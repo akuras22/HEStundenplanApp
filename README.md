@@ -2,7 +2,9 @@
 
 Inoffizieller Stundenplan der Hochschule Esslingen — live von der öffentlichen QIS/LSF-Seite
 geladen, mit Wochen-/Tagesansicht, Suche, Vorlesungs-Erinnerungen und anpassbarem Design. Dazu
-der Mensa-Speiseplan des Studierendenwerks Stuttgart mit Fotos, Preisen und Allergenen.
+der Mensa-Speiseplan des Studierendenwerks Stuttgart mit Fotos, Preisen und Allergenen,
+Live-Abfahrten von Bus und Bahn (VVS) an den Campus-Haltestellen und zu jedem Raum Gebäude,
+Etage und eine Karte.
 
 Es gibt zwei Apps in diesem Repository:
 
@@ -13,10 +15,12 @@ Es gibt zwei Apps in diesem Repository:
 
 Beide Apps sprechen dieselbe öffentliche QIS/LSF-Schnittstelle der Hochschule an und bieten den
 gleichen Funktionsumfang (Wochen-/Tagesansicht, Studiengang-Auswahl mit Favoriten, Suche,
-Vorlesungs-Erinnerungen, anpassbares Aussehen, Mensa-Speiseplan). Es gibt kein Backend und keinen
-Login — alle Daten kommen live von der Hochschulseite bzw. vom
+Vorlesungs-Erinnerungen, anpassbares Aussehen, Mensa-Speiseplan, Abfahrten, Raum-Lage). Es gibt
+kein Backend und keinen Login — alle Daten kommen live von der Hochschulseite, vom
 [Speiseplan des Studierendenwerks Stuttgart](https://www.studierendenwerk-stuttgart.de/essen/speiseplan)
-(Standort wählbar: die drei Mensen der HS Esslingen und die übrigen des Studierendenwerks).
+(Standort wählbar: die drei Mensen der HS Esslingen und die übrigen des Studierendenwerks), aus der
+Fahrplanauskunft des [VVS](https://www.vvs.de) und, für die Raum-Karten, von
+[OpenStreetMap](https://www.openstreetmap.org/copyright) (© OpenStreetMap-Mitwirkende).
 
 ## Android
 
@@ -88,8 +92,10 @@ Titelleiste des Fenstermanagers statt der eigenen Fensterknöpfe.
 
 ### Bekannte Einschränkungen
 
-- Vorlesungs-Erinnerungen laufen nur, solange die App geöffnet ist (kein Hintergrunddienst wie
-  Androids WorkManager, kein Systemtray-Icon zum Weiterlaufen im Hintergrund).
+- Vorlesungs-Erinnerungen bei geschlossenem Fenster gibt es nur mit „Im Hintergrund
+  weiterlaufen" (Einstellungen ▸ Benachrichtigungen, optional mit Start beim Anmelden). Ein
+  Systemleisten-Symbol gibt es dabei bewusst nicht (GNOME zeigt ohne Erweiterung keine an):
+  Wieder öffnen über das Anwendungsmenü, ganz beenden mit Strg+Q oder in den Einstellungen.
 - Theme (Hell/Dunkel) und Akzentfarbe folgen immer dem System — es gibt bewusst keine
   App-eigene Override-Einstellung dafür (in früheren Versionen versucht, aber nie zuverlässig
   über alle Bedienelemente hinweg wirksam).

@@ -23,6 +23,16 @@ void NotificationManager::notifyLectureReminder(const QString &title, const QStr
     notification->sendEvent();
 }
 
+void NotificationManager::notifyRunningInBackground()
+{
+    auto *notification = new KNotification(QStringLiteral("runningInBackground"));
+    notification->setTitle(QStringLiteral("Stundenplan läuft im Hintergrund weiter"));
+    notification->setText(QStringLiteral("Damit kommen deine Vorlesungs-Erinnerungen auch bei geschlossenem Fenster. "
+                                         "Wieder öffnen über das Anwendungsmenü, ganz beenden mit Strg+Q."));
+    notification->setIconName(QStringLiteral("org.hsesslingen.stundenplan.desktop"));
+    notification->sendEvent();
+}
+
 void NotificationManager::notifyTest()
 {
     auto *notification = new KNotification(QStringLiteral("testNotification"));
