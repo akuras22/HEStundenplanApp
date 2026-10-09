@@ -1,2 +1,1 @@
-- **Abfahrten-Bereich wieder entfernt.**
-- **Raum-Karte genauer**: Der Pin sitzt jetzt mitten im richtigen Gebäude — vorher lag er bei verwinkelten Gebäuden (z. B. F 01) teils im Innenhof oder am Nachbargebäude. Auf dem Handy ist die Karte außerdem näher herangezoomt.
+- **Stundenplan lädt wieder**: Die Hochschule hat die QIS-Seiten über https hinter eine Anmeldung gelegt. Die App bekam deshalb nur noch die Login-Seite und zeigte immer die zuletzt gespeicherte Woche als „Offline“. Sie lädt den Plan jetzt wieder live (über http, wie die QIS-Seiten selbst verlinken).

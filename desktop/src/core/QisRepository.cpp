@@ -9,7 +9,9 @@
 namespace stundenplan {
 
 namespace {
-const char *kBase = "https://www3.hs-esslingen.de/qislsf/rds";
+// Plain http on purpose: since October 2026 the https side of QIS redirects every request to the
+// HS Esslingen SSO login, while http still serves the public pages (QIS's own links are http too).
+const char *kBase = "http://www3.hs-esslingen.de/qislsf/rds";
 const char *kUserAgent =
     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/120.0.0.0 Mobile Safari/537.36";

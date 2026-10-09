@@ -21,7 +21,10 @@ class QisRepository(
         .build(),
 ) {
     companion object {
-        private const val BASE = "https://www3.hs-esslingen.de/qislsf/rds"
+        // Plain http on purpose: since October 2026 the https side of QIS redirects every request
+        // to the HS Esslingen SSO login, while http still serves the public pages (QIS's own links
+        // are http too). Cleartext is allowed for this one host in network_security_config.xml.
+        private const val BASE = "http://www3.hs-esslingen.de/qislsf/rds"
     }
 
     /** Fetches the full public catalog of Studiengang timetables (all faculties/semesters). */

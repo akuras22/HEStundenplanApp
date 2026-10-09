@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cleartext stays off everywhere except QIS, whose public pages are only reachable over http
+     (https redirects to the SSO login) — see QisRepository. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">www3.hs-esslingen.de</domain>
+    </domain-config>
+</network-security-config>

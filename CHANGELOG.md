@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.12.2
+
+- **Stundenplan lädt wieder**: Die Hochschule hat die QIS-Seiten über https hinter eine Anmeldung gelegt. Die App bekam deshalb nur noch die Login-Seite und zeigte immer die zuletzt gespeicherte Woche als „Offline“. Sie lädt den Plan jetzt wieder live (über http, wie die QIS-Seiten selbst verlinken).
+
 ## Version 1.12.1
 
 - **Abfahrten-Bereich wieder entfernt.**
