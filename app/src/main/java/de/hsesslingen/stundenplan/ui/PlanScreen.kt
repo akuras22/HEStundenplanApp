@@ -507,7 +507,7 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
                 }
 
                 if (state.isOffline && !isMensa) {
-                    OfflineBanner(since = state.offlineSince)
+                    OfflineBanner(since = state.offlineSince, loginRequired = state.loginRequired)
                 }
 
                 Box(
@@ -880,9 +880,10 @@ private val OFFLINE_BANNER_TIME_FORMAT = DateTimeFormatter.ofPattern("dd.MM. HH:
 
 /** Shown instead of a bare error when the live fetch failed but a previous successful fetch for
  *  this exact week is available offline (see TimetableCache) — so a dropped connection on campus
- *  still shows a schedule, just clearly marked as possibly outdated. */
+ *  still shows a schedule, just clearly marked as possibly outdated. [loginRequired]: QIS wanted
+ *  a login rather than the connection failing, which only Einstellungen ▸ Hochschul-Login fixes. */
 @Composable
-private fun OfflineBanner(since: Long?) {
+private fun OfflineBanner(since: Long?, loginRequired: Boolean) {
     val stamp = since?.let {
         Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime().format(OFFLINE_BANNER_TIME_FORMAT)
     }
@@ -894,7 +895,13 @@ private fun OfflineBanner(since: Long?) {
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
-            if (stamp != null) "Offline – Stand: $stamp" else "Offline",
+            when {
+                loginRequired && stamp != null -> "Anmeldung nötig (Einstellungen ▸ Hochschul-Login) – Stand: $stamp"
+                loginRequired -> "Anmeldung nötig (Einstellungen ▸ Hochschul-Login)"
+                stamp != null -> "Offline – Stand: $stamp"
+                else -> "Offline"
+            },
+            textAlign = TextAlign.Center,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

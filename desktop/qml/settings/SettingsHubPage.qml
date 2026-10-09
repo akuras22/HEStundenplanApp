@@ -10,6 +10,7 @@ PrefPage {
     title: qsTr("Einstellungen")
 
     Component { id: studiengaengePage; StudiengaengePage {} }
+    Component { id: loginPage; LoginPage {} }
     Component { id: notificationsPage; NotificationsPage {} }
     Component { id: appearancePage; AppearancePage {} }
     Component { id: aboutPage; AboutPage {} }
@@ -18,6 +19,7 @@ PrefPage {
         Repeater {
             model: [
                 { title: qsTr("Studiengänge"), icon: "view-calendar-list", page: studiengaengePage },
+                { title: qsTr("Hochschul-Login"), icon: "im-user", page: loginPage },
                 { title: qsTr("Benachrichtigungen"), icon: "notifications", page: notificationsPage },
                 { title: qsTr("Darstellung"), icon: "preferences-desktop-theme", page: appearancePage },
                 { title: qsTr("Über die App"), icon: "help-about", page: aboutPage },
@@ -28,7 +30,7 @@ PrefPage {
                 // Inside a Repeater the Repeater itself counts among the parent's children, so
                 // say explicitly where the row sits.
                 first: index === 0
-                last: index === 3
+                last: index === 4
                 text: modelData.title
                 icon.name: AppTheme.icon(modelData.icon)
                 activatable: true

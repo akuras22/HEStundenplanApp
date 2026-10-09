@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.12.3
+
+- **Angemeldet bleiben**: Nach dem Hochschul-Login musstest du dich bisher immer wieder komplett neu anmelden – mit Passwort und zweitem Faktor. Die App hält die Anmeldung jetzt von selbst am Laufen und erneuert sie im Hintergrund, ohne dass du etwas tun musst. Erst rund 10 Stunden nach dem Login ist wieder eine echte Anmeldung nötig (länger lässt die Hochschule eine Sitzung nicht zu).
+
 ## Version 1.12.2
 
 - **Stundenplan lädt wieder**: Die Hochschule hat die QIS-Seiten über https hinter eine Anmeldung gelegt. Die App bekam deshalb nur noch die Login-Seite und zeigte immer die zuletzt gespeicherte Woche als „Offline“. Sie lädt den Plan jetzt wieder live (über http, wie die QIS-Seiten selbst verlinken).

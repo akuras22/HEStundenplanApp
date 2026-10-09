@@ -9,6 +9,7 @@
 namespace stundenplan {
 
 class QisRepository;
+class QisSession;
 class SettingsStore;
 class TimetableCache;
 
@@ -31,7 +32,7 @@ class TimetableController : public QObject
     Q_PROPERTY(QVariantList weekEvents READ weekEvents NOTIFY weekEventsChanged)
 
 public:
-    explicit TimetableController(SettingsStore *settings, TimetableCache *cache, QObject *parent = nullptr);
+    explicit TimetableController(SettingsStore *settings, TimetableCache *cache, QisSession *session, QObject *parent = nullptr);
 
     QVariantList studiengaenge() const;
     QVariantList favoriteStudiengaenge() const;

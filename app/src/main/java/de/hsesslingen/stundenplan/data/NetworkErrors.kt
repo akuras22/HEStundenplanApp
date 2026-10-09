@@ -15,6 +15,7 @@ fun friendlyNetworkErrorMessage(
 ): String = when (e) {
     is UnknownHostException -> "Keine Internetverbindung."
     is SocketTimeoutException -> "Die $site antwortet nicht. Bitte später erneut versuchen."
+    is LoginRequiredException -> "Die Hochschule verlangt eine Anmeldung. Melde dich unter Einstellungen ▸ Hochschul-Login an."
     is IOException -> {
         val httpCode = Regex("""HTTP (\d{3})""").find(e.message.orEmpty())?.groupValues?.get(1)
         if (httpCode != null) {

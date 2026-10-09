@@ -31,9 +31,12 @@ import de.hsesslingen.stundenplan.ui.StundenplanViewModel
 import de.hsesslingen.stundenplan.ui.UpdateDialog
 import de.hsesslingen.stundenplan.ui.settings.AboutScreen
 import de.hsesslingen.stundenplan.ui.settings.AppearanceScreen
+import de.hsesslingen.stundenplan.ui.settings.LoginScreen
+import de.hsesslingen.stundenplan.ui.settings.LoginWebScreen
 import de.hsesslingen.stundenplan.ui.settings.NotificationsScreen
 import de.hsesslingen.stundenplan.ui.settings.SettingsHubScreen
 import de.hsesslingen.stundenplan.ui.settings.SettingsRoute
+import de.hsesslingen.stundenplan.ui.settings.SilentLoginRefresh
 import de.hsesslingen.stundenplan.ui.settings.StudiengangScreen
 import de.hsesslingen.stundenplan.ui.theme.StundenplanTheme
 import java.time.LocalDate
@@ -94,6 +97,7 @@ private fun StundenplanApp(viewModel: StundenplanViewModel) {
     val updateState by viewModel.updateState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val pendingOpenDate by viewModel.pendingOpenDate.collectAsState()
+    val silentRefreshActive by viewModel.silentRefreshActive.collectAsState()
 
     // A reminder notification tap should always land on the Plan screen's Tag-Ansicht, even if
     // the user was mid-way through Einstellungen when they tapped it.
@@ -131,9 +135,27 @@ private fun StundenplanApp(viewModel: StundenplanViewModel) {
                     onNavigate = { route -> settingsStack = settingsStack + route },
                 )
                 SettingsRoute.Studiengaenge -> StudiengangScreen(viewModel, onBack = { settingsStack = settingsStack.dropLast(1) })
+                SettingsRoute.Login -> LoginScreen(
+                    viewModel,
+                    onBack = { settingsStack = settingsStack.dropLast(1) },
+                    onStartLogin = { settingsStack = settingsStack + SettingsRoute.LoginWeb },
+                )
+                SettingsRoute.LoginWeb -> LoginWebScreen(
+                    onLoggedIn = { cookie ->
+                        viewModel.completeLogin(cookie)
+                        settingsStack = settingsStack.dropLast(1)
+                    },
+                    onBack = { settingsStack = settingsStack.dropLast(1) },
+                )
                 SettingsRoute.Notifications -> NotificationsScreen(viewModel, onBack = { settingsStack = settingsStack.dropLast(1) })
                 SettingsRoute.Appearance -> AppearanceScreen(viewModel, onBack = { settingsStack = settingsStack.dropLast(1) })
                 SettingsRoute.About -> AboutScreen(viewModel, onBack = { settingsStack = settingsStack.dropLast(1) })
+            }
+
+            // Invisible: renews the QIS session from the still-valid SSO session without any UI,
+            // whenever the ViewModel asks for it (see StundenplanViewModel.silentRefreshActive).
+            if (silentRefreshActive) {
+                SilentLoginRefresh(onResult = { cookie -> viewModel.onSilentRefreshResult(cookie) })
             }
         }
     }

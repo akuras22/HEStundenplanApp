@@ -70,7 +70,7 @@ fun AboutScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
             AppIdentityHeader()
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AboutActionRow(
+                SettingsActionRow(
                     icon = Icons.Filled.SystemUpdate,
                     title = "Nach Updates suchen",
                     subtitle = "Version ${BuildConfig.VERSION_NAME} installiert",
@@ -84,14 +84,14 @@ fun AboutScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                         }
                     }
                 }
-                AboutActionRow(
+                SettingsActionRow(
                     icon = Icons.Filled.DeleteSweep,
                     title = "Zwischenspeicher leeren",
                     subtitle = "Löscht zwischengespeicherte Stundenpläne und Speiseplan-Fotos",
                 ) {
                     viewModel.clearCache()
                 }
-                AboutActionRow(
+                SettingsActionRow(
                     icon = Icons.Filled.Article,
                     title = "Änderungsprotokoll",
                     subtitle = "Was ist neu in dieser Version",
@@ -107,7 +107,7 @@ fun AboutScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                         }
                     }
                 }
-                AboutActionRow(
+                SettingsActionRow(
                     icon = Icons.Filled.Code,
                     title = "Quellcode",
                     subtitle = "Auf GitHub ansehen",
@@ -171,7 +171,7 @@ private fun AppIdentityHeader() {
 }
 
 @Composable
-private fun AboutActionRow(
+internal fun SettingsActionRow(
     icon: ImageVector,
     title: String,
     subtitle: String,

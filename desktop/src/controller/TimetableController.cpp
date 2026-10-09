@@ -48,11 +48,11 @@ QVariantMap eventToVariant(const TimetableEvent &e, int column = 0, int columnCo
 
 } // namespace
 
-TimetableController::TimetableController(SettingsStore *settings, TimetableCache *cache, QObject *parent)
+TimetableController::TimetableController(SettingsStore *settings, TimetableCache *cache, QisSession *session, QObject *parent)
     : QObject(parent)
     , m_settings(settings)
     , m_cache(cache)
-    , m_repository(new QisRepository(this))
+    , m_repository(new QisRepository(session, this))
 {
     const QDate today = QDate::currentDate();
     m_weekMonday = today.addDays(-(today.dayOfWeek() - 1));

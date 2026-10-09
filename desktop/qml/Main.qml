@@ -1,9 +1,11 @@
 import QtQuick
 import QtQuick.Controls as Controls
+import QtWebEngine
 import org.kde.kirigami as Kirigami
 import de.hsesslingen.stundenplan.desktop
 import de.hsesslingen.stundenplan.platform
 import "components"
+import "settings"
 
 Kirigami.ApplicationWindow {
     id: root
@@ -81,4 +83,30 @@ Kirigami.ApplicationWindow {
     }
 
     globalDrawer: null
+
+    // Shared, persistent browser profile for the Hochschul-Login. Unlike an off-the-record one it
+    // keeps the SSO session (Keycloak) cookies, so the login survives an app restart and can be
+    // renewed silently (SilentLoginRefresh.qml) instead of asking for password + second factor
+    // again. Both the visible login page and the invisible refresh view use this one profile.
+    WebEngineProfile {
+        id: qisLoginProfileItem
+        storageName: "qis-login"
+        offTheRecord: false
+        persistentCookiesPolicy: WebEngineProfile.AllowPersistentCookies
+    }
+    property alias qisLoginProfile: qisLoginProfileItem
+
+    // Invisible: renews the QIS session from the still-valid SSO session with no UI, whenever
+    // QisSession asks for it (current session ran out, SSO session still alive).
+    Loader {
+        active: qisSession.silentRefreshActive
+        sourceComponent: SilentLoginRefresh {}
+    }
+
+    Component.onCompleted: {
+        // Collect the Shibboleth cookies from the shared profile for the whole run, and renew a
+        // session that expired while the app was closed right away.
+        qisSession.attachProfile(qisLoginProfileItem)
+        qisSession.startSilentRefreshIfPossible()
+    }
 }

@@ -24,7 +24,7 @@ include(KDECompilerSettings NO_POLICY_SCOPE)
 
 set(QT_DEFAULT_MAJOR_VERSION 6)
 # 6.7: per-corner Rectangle radii and the Shape curve renderer, both used by the GNOME look.
-find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network DBus)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Network DBus WebEngineQuick)
 find_package(KF6 REQUIRED COMPONENTS
     CoreAddons
     Config
@@ -46,6 +46,8 @@ qt_add_executable(hestundenplan-desktop
     src/core/QisParser.cpp
     src/core/QisRepository.h
     src/core/QisRepository.cpp
+    src/core/QisSession.h
+    src/core/QisSession.cpp
     src/core/OverlapLayout.h
     src/core/OverlapLayout.cpp
     src/core/NextEvent.h
@@ -121,6 +123,9 @@ qt_add_qml_module(hestundenplan-desktop
         qml/settings/NotificationsPage.qml
         qml/settings/AppearancePage.qml
         qml/settings/AboutPage.qml
+        qml/settings/LoginPage.qml
+        qml/settings/LoginWebPage.qml
+        qml/settings/SilentLoginRefresh.qml
     RESOURCES
         icons/org.hsesslingen.stundenplan.desktop.svg
 )
@@ -186,6 +191,7 @@ target_link_libraries(hestundenplan-desktop PRIVATE
     Qt6::QuickControls2
     Qt6::Network
     Qt6::DBus
+    Qt6::WebEngineQuick
     KF6::CoreAddons
     KF6::ConfigCore
     KF6::ConfigGui

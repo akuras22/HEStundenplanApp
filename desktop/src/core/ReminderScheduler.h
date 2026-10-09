@@ -7,6 +7,7 @@
 
 namespace stundenplan {
 
+class QisSession;
 class SettingsStore;
 class TimetableCache;
 class NotificationManager;
@@ -25,6 +26,7 @@ public:
     explicit ReminderScheduler(SettingsStore *settings,
                                 TimetableCache *cache,
                                 NotificationManager *notifications,
+                                QisSession *session,
                                 QObject *parent = nullptr);
 
     void start();

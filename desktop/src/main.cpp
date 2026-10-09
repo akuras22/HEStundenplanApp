@@ -4,6 +4,7 @@
 #include "core/DesktopStyle.h"
 #include "core/ImageNetworkCache.h"
 #include "core/NotificationManager.h"
+#include "core/QisSession.h"
 #include "core/ReminderScheduler.h"
 #include "core/SettingsStore.h"
 #include "core/TimetableCache.h"
@@ -20,12 +21,16 @@
 #include <QQmlContext>
 #include <QtQml>
 #include <QUrl>
+#include <QtWebEngineQuick>
 
 int main(int argc, char *argv[])
 {
     // See DesktopStyle.h: org.kde.desktop under Plasma, our own Adwaita-shaped style everywhere
     // else — QQuickStyle::setStyle() must run before QGuiApplication exists.
     stundenplan::DesktopStyle::selectQuickControlsStyle();
+    // The Hochschul-Login page (LoginWebPage.qml) is a WebEngineView, which needs this before the
+    // QGuiApplication exists. It only sets things up; no browser process starts until the page opens.
+    QtWebEngineQuick::initialize();
 
     QGuiApplication app(argc, argv);
     // Must exist before the QML engine loads anything: both the app's QML and the Adwaita style
@@ -74,10 +79,11 @@ int main(int argc, char *argv[])
 
     auto *settings = new SettingsStore(&app);
     auto *cache = new TimetableCache();
-    auto *controller = new TimetableController(settings, cache, &app);
+    auto *qisSession = new QisSession(&app);
+    auto *controller = new TimetableController(settings, cache, qisSession, &app);
     auto *updateManager = new UpdateManager(&app);
     auto *notifications = new NotificationManager(&app);
-    auto *reminderScheduler = new ReminderScheduler(settings, cache, notifications, &app);
+    auto *reminderScheduler = new ReminderScheduler(settings, cache, notifications, qisSession, &app);
     auto *mensaController = new MensaController(settings, &app);
     auto *backgroundService = new BackgroundService(settings, notifications, &app);
 
@@ -88,6 +94,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
     engine.rootContext()->setContextProperty(QStringLiteral("settingsStore"), settings);
     engine.rootContext()->setContextProperty(QStringLiteral("timetableController"), controller);
+    engine.rootContext()->setContextProperty(QStringLiteral("qisSession"), qisSession);
     engine.rootContext()->setContextProperty(QStringLiteral("updateManager"), updateManager);
     engine.rootContext()->setContextProperty(QStringLiteral("notificationManager"), notifications);
     engine.rootContext()->setContextProperty(QStringLiteral("reminderScheduler"), reminderScheduler);

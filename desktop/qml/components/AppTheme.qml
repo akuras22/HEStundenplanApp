@@ -66,6 +66,9 @@ QtObject {
         "edit-copy": "edit-copy-symbolic",
         "edit-undo": "edit-undo-symbolic",
         "list-add": "list-add-symbolic",
+        "im-user": "avatar-default-symbolic",
+        "dialog-password": "dialog-password-symbolic",
+        "system-log-out": "system-log-out-symbolic",
     })
 
     function icon(name: string): string {

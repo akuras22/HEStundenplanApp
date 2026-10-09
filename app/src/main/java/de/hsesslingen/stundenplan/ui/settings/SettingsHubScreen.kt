@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -36,6 +37,7 @@ private data class SettingsCategory(val icon: ImageVector, val title: String, va
 
 private val CATEGORIES = listOf(
     SettingsCategory(Icons.Filled.School, "Studiengänge", "Auswahl & Favoriten", SettingsRoute.Studiengaenge),
+    SettingsCategory(Icons.Filled.AccountCircle, "Hochschul-Login", "Anmeldung bei der Hochschule (optional)", SettingsRoute.Login),
     SettingsCategory(Icons.Filled.Notifications, "Benachrichtigungen", "Vorlesungserinnerungen", SettingsRoute.Notifications),
     SettingsCategory(Icons.Filled.Palette, "Darstellung", "Farben & ausgeblendete Termine", SettingsRoute.Appearance),
     SettingsCategory(Icons.Filled.Info, "Über die App", "Version, Updates, Speicher", SettingsRoute.About),

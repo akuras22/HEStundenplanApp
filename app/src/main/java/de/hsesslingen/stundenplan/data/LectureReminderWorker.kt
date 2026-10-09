@@ -28,7 +28,7 @@ class LectureReminderWorker(context: Context, params: WorkerParameters) : Corout
         val monday = today.with(DayOfWeek.MONDAY)
 
         val events = try {
-            QisRepository().fetchTimetable(studiengang, monday)
+            QisRepository(QisSession(applicationContext)).fetchTimetable(studiengang, monday)
         } catch (_: Exception) {
             TimetableCache(applicationContext).get(studiengang, monday)?.events ?: return Result.retry()
         }

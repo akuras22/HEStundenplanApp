@@ -7,19 +7,23 @@
 #include <QNetworkReply>
 #include <QObject>
 #include <QPointer>
+#include <QUrlQuery>
 
 namespace stundenplan {
+
+class QisSession;
 
 /**
  * Talks directly to HS Esslingen's public QIS/LSF pages. Nothing is cached to disk here: every
  * call hits the website live, matching what a browser would show at that moment (see
- * TimetableCache for the separate offline-fallback layer). Ported from QisRepository.kt.
+ * TimetableCache for the separate offline-fallback layer). With a login from `session` the pages
+ * are loaded over https, otherwise over http (see QisSession). Ported from QisRepository.kt.
  */
 class QisRepository : public QObject
 {
     Q_OBJECT
 public:
-    explicit QisRepository(QObject *parent = nullptr);
+    explicit QisRepository(QisSession *session, QObject *parent = nullptr);
 
     /** Fetches the full public catalog of Studiengang timetables (all faculties/semesters). */
     void fetchStudiengaenge();
@@ -34,9 +38,10 @@ Q_SIGNALS:
     void fetchFailed(const QString &message, bool forTimetable);
 
 private:
-    QNetworkReply *execute(const QUrl &url, const std::function<void(const QString &)> &onSuccess, bool forTimetable);
+    QNetworkReply *execute(const QUrlQuery &query, const std::function<void(const QString &)> &onSuccess, bool forTimetable);
 
     QNetworkAccessManager *m_manager;
+    QisSession *m_session;
     // Rapidly stepping through weeks/days would otherwise fire overlapping requests whose
     // replies can arrive out of order, briefly showing the wrong week's events — aborting the
     // previous in-flight timetable request when a new one starts keeps only the latest live.

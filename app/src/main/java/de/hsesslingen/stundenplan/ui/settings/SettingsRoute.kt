@@ -5,6 +5,8 @@ package de.hsesslingen.stundenplan.ui.settings
 sealed interface SettingsRoute {
     data object Hub : SettingsRoute
     data object Studiengaenge : SettingsRoute
+    data object Login : SettingsRoute
+    data object LoginWeb : SettingsRoute
     data object Notifications : SettingsRoute
     data object Appearance : SettingsRoute
     data object About : SettingsRoute

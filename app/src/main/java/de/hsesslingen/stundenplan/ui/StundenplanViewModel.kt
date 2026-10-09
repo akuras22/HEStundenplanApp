@@ -14,7 +14,10 @@ import de.hsesslingen.stundenplan.data.LectureReminderWorker
 import de.hsesslingen.stundenplan.data.MensaDay
 import de.hsesslingen.stundenplan.data.MensaRepository
 import de.hsesslingen.stundenplan.data.NotificationHelper
+import de.hsesslingen.stundenplan.data.LoginRequiredException
+import de.hsesslingen.stundenplan.data.QisLogin
 import de.hsesslingen.stundenplan.data.QisRepository
+import de.hsesslingen.stundenplan.data.QisSession
 import de.hsesslingen.stundenplan.data.SettingsStore
 import de.hsesslingen.stundenplan.data.Studiengang
 import de.hsesslingen.stundenplan.data.ThemeMode
@@ -51,6 +54,8 @@ data class PlanUiState(
     // fresh fetch — offlineSince is when that fallback was itself originally fetched.
     val isOffline: Boolean = false,
     val offlineSince: Long? = null,
+    // The offline fallback is showing because QIS demanded a login, not because of the connection.
+    val loginRequired: Boolean = false,
 )
 
 /** Identifies one fetched Speiseplan: a Mensa (see MensaLocations) on one day. */
@@ -84,7 +89,8 @@ data class StudiengangPickerState(
 
 class StundenplanViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = QisRepository()
+    private val qisSession = QisSession(application)
+    private val repository = QisRepository(qisSession)
     private val mensaRepository = MensaRepository()
     private val settingsStore = SettingsStore(application)
     private val updateManager = UpdateManager(application)
@@ -98,6 +104,16 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _updateState = MutableStateFlow(UpdateUiState())
     val updateState: StateFlow<UpdateUiState> = _updateState.asStateFlow()
+
+    /** True while the invisible SSO refresh WebView (see SilentLoginRefresh) should be mounted —
+     *  MainActivity observes this and renders it, which renews the login without any UI. */
+    private val _silentRefreshActive = MutableStateFlow(false)
+    val silentRefreshActive: StateFlow<Boolean> = _silentRefreshActive.asStateFlow()
+
+    /** Set once a silent refresh has failed (SSO session really gone), so we don't keep retrying
+     *  it on every expiry until the user logs in again. In-memory on purpose: a fresh process gets
+     *  one more attempt, in case the SSO cookies are actually still good. */
+    private var silentRefreshExhausted = false
 
     /** One-shot action-feedback messages (e.g. "Zwischenspeicher geleert.") shown as a Snackbar
      *  from MainActivity — a SharedFlow rather than state, so the same message can be posted twice
@@ -242,6 +258,22 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         // actually does something the first time, or if it was somehow lost (e.g. app data cleared
         // without going through the toggle).
         viewModelScope.launch { updateReminderWork(settingsStore.remindersEnabled.first()) }
+
+        // Whenever the QIS session expires while the SSO session is still alive, renew it silently
+        // instead of making the user log in again. This fires on app start (for a session that ran
+        // out while the app was closed) and the moment QisRepository hits a login redirect mid-use.
+        viewModelScope.launch {
+            qisSession.login.collect { login ->
+                if (login != null && login.expired && !silentRefreshExhausted &&
+                    !_silentRefreshActive.value && qisSession.canSilentlyRefresh()
+                ) {
+                    _silentRefreshActive.value = true
+                }
+            }
+        }
+        // Force the time-based expiry check once up front, so a session already past its cookie
+        // lifetime triggers the silent refresh above right away rather than only on the first fetch.
+        qisSession.activeLogin()
     }
 
     /**
@@ -312,6 +344,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
         if (cached != null) {
             _planState.value = _planState.value.copy(
                 weekMonday = weekMonday, events = cached, error = null, isOffline = false, offlineSince = null,
+                loginRequired = false,
             )
             return
         }
@@ -325,6 +358,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
                 if (_planState.value.weekMonday == weekMonday) {
                     _planState.value = _planState.value.copy(
                         events = events, isLoading = false, isOffline = false, offlineSince = null,
+                        loginRequired = false,
                     )
                 }
             } catch (e: Exception) {
@@ -336,6 +370,7 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
                     _planState.value.copy(
                         events = offline.events, isLoading = false, error = null,
                         isOffline = true, offlineSince = offline.savedAt,
+                        loginRequired = e is LoginRequiredException,
                     )
                 } else {
                     _planState.value.copy(isLoading = false, error = friendlyNetworkErrorMessage(e))
@@ -490,6 +525,41 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     fun resetAppearance() {
         viewModelScope.launch { settingsStore.resetAppearance() }
+    }
+
+    /** The login from Einstellungen ▸ Hochschul-Login, if any (see [QisSession]). */
+    val qisLogin: StateFlow<QisLogin?> = qisSession.login
+
+    /** Called by the login WebView once the SSO login has landed back on QIS with a session
+     *  cookie — reloads the current week so it comes through the login right away. */
+    fun completeLogin(cookie: String) {
+        qisSession.save(cookie, fullLogin = true)
+        silentRefreshExhausted = false
+        postFeedback("Angemeldet.")
+        refresh()
+    }
+
+    /** Result of the invisible SSO refresh (see SilentLoginRefresh): a fresh session cookie if the
+     *  SSO session was still alive, or null if it has ended too. Stays silent either way — on
+     *  success the plan just reloads over https; on failure it keeps loading anonymously and
+     *  Einstellungen shows the login as expired. */
+    fun onSilentRefreshResult(cookie: String?) {
+        _silentRefreshActive.value = false
+        if (cookie != null) {
+            qisSession.save(cookie, fullLogin = false)
+            silentRefreshExhausted = false
+            refresh()
+        } else {
+            silentRefreshExhausted = true
+            qisSession.markExpired()
+        }
+    }
+
+    fun logout() {
+        qisSession.clear()
+        silentRefreshExhausted = false
+        _silentRefreshActive.value = false
+        postFeedback("Abgemeldet.")
     }
 
     /** Manual "Zwischenspeicher leeren" action (Einstellungen ▸ Über die App) — clears both the

@@ -10,12 +10,16 @@
 
 namespace stundenplan {
 
-ReminderScheduler::ReminderScheduler(SettingsStore *settings, TimetableCache *cache, NotificationManager *notifications, QObject *parent)
+ReminderScheduler::ReminderScheduler(SettingsStore *settings,
+                                     TimetableCache *cache,
+                                     NotificationManager *notifications,
+                                     QisSession *session,
+                                     QObject *parent)
     : QObject(parent)
     , m_settings(settings)
     , m_cache(cache)
     , m_notifications(notifications)
-    , m_repository(new QisRepository(this))
+    , m_repository(new QisRepository(session, this))
 {
     connect(&m_timer, &QTimer::timeout, this, &ReminderScheduler::runCheck);
     connect(m_notifications, &NotificationManager::openRequested, this, &ReminderScheduler::openRequested);
