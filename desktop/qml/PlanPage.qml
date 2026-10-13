@@ -383,6 +383,14 @@ Kirigami.Page {
 
     EventDetailSheet {
         id: detailSheet
+        onPickDatesRequested: (eventData) => {
+            hideDatesSheet.eventData = eventData
+            hideDatesSheet.open()
+        }
+    }
+
+    HideDatesSheet {
+        id: hideDatesSheet
     }
 
     MealDetailSheet {

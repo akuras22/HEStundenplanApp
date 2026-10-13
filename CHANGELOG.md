@@ -2,6 +2,10 @@
 
 Hier steht in verständlicher Sprache, was sich von Version zu Version geändert hat — nicht nur für Entwickler.
 
+## Version 1.13.0
+
+- **Einzelne Vorlesungen ausblenden**: Fällt eine Vorlesung an einem Tag aus (z. B. „Keine Vorlesung“ im Vorlesungskalender), kannst du jetzt genau diesen einen Termin ausblenden statt gleich den ganzen Kurs. Tipp auf die Vorlesung und dann auf „Ausblenden…“: entweder nur diesen Termin, an mehreren ausgewählten Daten auf einmal oder wie bisher immer. Unter Einstellungen → Darstellung holst du ausgeblendete Termine jederzeit einzeln wieder zurück.
+
 ## Version 1.12.3
 
 - **Angemeldet bleiben**: Nach dem Hochschul-Login musstest du dich bisher immer wieder komplett neu anmelden – mit Passwort und zweitem Faktor. Die App hält die Anmeldung jetzt von selbst am Laufen und erneuert sie im Hintergrund, ohne dass du etwas tun musst. Erst rund 10 Stunden nach dem Login ist wieder eine echte Anmeldung nötig (länger lässt die Hochschule eine Sitzung nicht zu).

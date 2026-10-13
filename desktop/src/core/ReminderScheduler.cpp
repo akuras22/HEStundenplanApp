@@ -87,13 +87,14 @@ void ReminderScheduler::processDayEvents(const QList<TimetableEvent> &events, co
         return;
     const Weekday weekday = *weekdayOpt;
     const auto hiddenKeys = m_settings->hiddenEventKeys();
+    const auto hiddenOccurrenceKeys = m_settings->hiddenOccurrenceKeys();
     const auto leadMinutesSet = m_settings->reminderLeadMinutesSet();
     const int nowMinutes = QTime::currentTime().hour() * 60 + QTime::currentTime().minute();
     const QString dateKey = today.toString(Qt::ISODate);
 
     QList<TimetableEvent> dayEvents;
     for (const auto &e : events) {
-        if (e.day == weekday && !hiddenKeys.contains(e.groupKey()))
+        if (e.day == weekday && !e.isHiddenOn(today, hiddenKeys, hiddenOccurrenceKeys))
             dayEvents.append(e);
     }
 

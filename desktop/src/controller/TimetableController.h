@@ -55,6 +55,15 @@ public:
     Q_INVOKABLE void hideGroup(const QString &groupKey, bool hidden);
     Q_INVOKABLE bool isGroupHidden(const QString &groupKey) const;
 
+    /** For the "Termine ausblenden" picker: every date the given event's weekly slot can fall on,
+     *  as {date, label, key, hidden, current} entries (see TimetableEvent::candidateDates). */
+    Q_INVOKABLE QVariantList occurrenceChoices(const QVariantMap &event) const;
+    /** Hides/un-hides single dated lectures by their occurrence keys. */
+    Q_INVOKABLE void updateHiddenOccurrences(const QStringList &hide, const QStringList &show);
+    /** Single hidden lectures for the Darstellung list, grouped per slot as {title, time, keys,
+     *  dates: [{key, label}]}. */
+    Q_INVOKABLE QVariantList hiddenOccurrences() const;
+
     /** All currently hidden recurring event groups, as {groupKey, title} entries (best-effort
      *  title lookup from the loaded week) — for the Darstellung "Einblenden" list. */
     Q_INVOKABLE QVariantList hiddenGroups() const;
@@ -91,6 +100,8 @@ private:
     void setOffline(bool offline);
     void setErrorMessage(const QString &message);
     void applyEvents(const QList<TimetableEvent> &events, bool fromCache);
+    void rebuildWeekEvents();
+    QDate dateOf(const TimetableEvent &event) const;
     std::optional<Studiengang> currentStudiengang() const;
 
     SettingsStore *m_settings;

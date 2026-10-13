@@ -60,6 +60,7 @@ import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.ViewDay
 import androidx.compose.material.icons.outlined.ViewWeek
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
@@ -119,6 +120,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.hsesslingen.stundenplan.data.CampusLocations
+import de.hsesslingen.stundenplan.data.candidateDates
+import de.hsesslingen.stundenplan.data.isHiddenOn
+import de.hsesslingen.stundenplan.data.occurrenceKey
 import de.hsesslingen.stundenplan.data.MensaLocations
 import de.hsesslingen.stundenplan.data.TimetableEvent
 import de.hsesslingen.stundenplan.data.UpdateInfo
@@ -140,6 +144,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import kotlin.math.abs
 
 private enum class PlanViewMode { WEEK, DAY, MENSA }
@@ -335,11 +340,13 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     val state by viewModel.planState.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
     val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
+    val hiddenOccurrenceKeys by viewModel.hiddenOccurrenceKeys.collectAsState()
     val defaultViewIsDay by viewModel.defaultViewIsDay.collectAsState()
     var viewMode by remember { mutableStateOf<PlanViewMode?>(null) }
     val resolvedViewMode = viewMode ?: if (defaultViewIsDay) PlanViewMode.DAY else PlanViewMode.WEEK
     var selectedDate by remember { mutableStateOf(LocalDate.now().nearestWeekday()) }
     var selectedEvent by remember { mutableStateOf<TimetableEvent?>(null) }
+    var hidingEvent by remember { mutableStateOf<Pair<TimetableEvent, LocalDate>?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showFavoritesMenu by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
@@ -371,10 +378,12 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
         if (state.studiengang != null) viewModel.loadWeek(selectedDate.weekMonday())
     }
 
-    // Parallel groups (e.g. one of three Tutorium sections) the user hid via the event detail
-    // dialog — filtered here, at display time, so the raw fetched/cached week stays intact.
-    val visibleEvents = remember(state.events, hiddenGroupKeys) {
-        state.events.filterNot { it.groupKey in hiddenGroupKeys }
+    // Parallel groups (e.g. one of three Tutorium sections) and single dated lectures the user hid
+    // via the event detail dialog — filtered here, at display time, so the raw fetched/cached week
+    // stays intact.
+    val eventsMonday = state.weekMonday ?: selectedDate.weekMonday()
+    val visibleEvents = remember(state.events, eventsMonday, hiddenGroupKeys, hiddenOccurrenceKeys) {
+        state.events.filterNot { it.isHiddenOn(eventsMonday.plusDays(it.day.ordinal.toLong()), hiddenGroupKeys, hiddenOccurrenceKeys) }
     }
 
     CompositionLocalProvider(LocalBlockDisplayOptions provides blockOptions) {
@@ -638,11 +647,27 @@ fun PlanScreen(viewModel: StundenplanViewModel, onOpenSettings: () -> Unit) {
     }
 
     selectedEvent?.let { event ->
+        val date = eventsMonday.plusDays(event.day.ordinal.toLong())
         EventDetailDialog(
             event = event,
             hidden = event.groupKey in hiddenGroupKeys,
-            onToggleHidden = { hidden -> viewModel.setGroupHidden(event.groupKey, hidden) },
+            onHide = {
+                selectedEvent = null
+                hidingEvent = event to date
+            },
+            onUnhide = { viewModel.setGroupHidden(event.groupKey, false) },
             onDismiss = { selectedEvent = null },
+        )
+    }
+
+    hidingEvent?.let { (event, date) ->
+        HideEventDialog(
+            event = event,
+            date = date,
+            hiddenOccurrenceKeys = hiddenOccurrenceKeys,
+            onHideGroup = { viewModel.setGroupHidden(event.groupKey, true) },
+            onUpdateOccurrences = { hide, show -> viewModel.updateHiddenOccurrences(hide, show) },
+            onDismiss = { hidingEvent = null },
         )
     }
 
@@ -1601,7 +1626,13 @@ private fun DayColumn(
 }
 
 @Composable
-private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHidden: (Boolean) -> Unit, onDismiss: () -> Unit) {
+private fun EventDetailDialog(
+    event: TimetableEvent,
+    hidden: Boolean,
+    onHide: () -> Unit,
+    onUnhide: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val context = LocalContext.current
     // Samsung's own dialogs (e.g. Gallery "Details") use a plain near-black card, a bold
     // left-aligned title with no colored banner, and simple stacked label/value rows.
@@ -1609,11 +1640,11 @@ private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHi
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen", fontWeight = FontWeight.Bold) } },
         dismissButton = {
-            // Lets the user permanently hide a parallel group they're not in (e.g. one of three
-            // simultaneous Tutorium sections) — see TimetableEvent.groupKey for how "this group"
-            // is identified across weeks. Re-enabling happens in Einstellungen.
-            TextButton(onClick = { onToggleHidden(!hidden) }) {
-                Text(if (hidden) "Wieder einblenden" else "Ausblenden")
+            // Hides just this lecture, chosen dates of it, or the whole group (e.g. a parallel
+            // Tutorium section the user isn't in) — see HideEventDialog. Re-enabling happens in
+            // Einstellungen.
+            TextButton(onClick = { if (hidden) onUnhide() else onHide() }) {
+                Text(if (hidden) "Wieder einblenden" else "Ausblenden…")
             }
         },
         title = {
@@ -1648,6 +1679,116 @@ private fun EventDetailDialog(event: TimetableEvent, hidden: Boolean, onToggleHi
             }
         },
     )
+}
+
+private val HIDE_DATE_FORMAT = DateTimeFormatter.ofPattern("EE, dd.MM.yyyy", Locale.GERMAN)
+
+/**
+ * What "Ausblenden" hides: only the tapped lecture on [date], a hand-picked set of dates of this
+ * weekly slot (e.g. every "Keine Vorlesung" Wednesday from the Vorlesungskalender), or the whole
+ * group for good. The date picker also shows dates already hidden, pre-checked, so unchecking one
+ * brings that lecture back.
+ */
+@Composable
+private fun HideEventDialog(
+    event: TimetableEvent,
+    date: LocalDate,
+    hiddenOccurrenceKeys: Set<String>,
+    onHideGroup: () -> Unit,
+    onUpdateOccurrences: (hide: Collection<String>, show: Collection<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var pickingDates by remember { mutableStateOf(false) }
+    val candidates = remember(event, date) { event.candidateDates(around = date) }
+    var checked by remember(event, hiddenOccurrenceKeys) {
+        mutableStateOf(candidates.filter { event.occurrenceKey(it) in hiddenOccurrenceKeys }.toSet())
+    }
+    val slotLabel = "${event.day.germanLabel}, ${event.startLabel} – ${event.endLabel}"
+
+    if (!pickingDates) {
+        OneUiAlertDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+            title = { Text("Ausblenden", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(event.title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    HideOption("Nur diesen Termin", "${date.format(HIDE_DATE_FORMAT)}, ${event.startLabel}") {
+                        onUpdateOccurrences(listOf(event.occurrenceKey(date)), emptyList())
+                        onDismiss()
+                    }
+                    HideOption("An bestimmten Terminen…", "Mehrere Daten auswählen ($slotLabel)") { pickingDates = true }
+                    HideOption("Immer ausblenden", "Alle Termine dieser Veranstaltung") {
+                        onHideGroup()
+                        onDismiss()
+                    }
+                }
+            },
+        )
+    } else {
+        OneUiAlertDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(onClick = {
+                    onUpdateOccurrences(
+                        checked.map { event.occurrenceKey(it) },
+                        (candidates.toSet() - checked).map { event.occurrenceKey(it) },
+                    )
+                    onDismiss()
+                }) { Text("Speichern", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+            title = { Text("Termine ausblenden", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "${event.title} · $slotLabel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { checked = emptySet() }) { Text("Keine") }
+                        TextButton(onClick = { checked = candidates.toSet() }) { Text("Alle") }
+                    }
+                    Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
+                        candidates.forEach { candidate ->
+                            val isChecked = candidate in checked
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .clickable { checked = if (isChecked) checked - candidate else checked + candidate }
+                                    .padding(end = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(checked = isChecked, onCheckedChange = null, modifier = Modifier.padding(12.dp))
+                                Text(
+                                    candidate.format(HIDE_DATE_FORMAT),
+                                    fontWeight = if (candidate == date) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun HideOption(title: String, subtitle: String, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 /** Search across the currently loaded week's events by room or lecturer — deliberately scoped to

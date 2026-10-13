@@ -69,6 +69,8 @@ QtObject {
         "im-user": "avatar-default-symbolic",
         "dialog-password": "dialog-password-symbolic",
         "system-log-out": "system-log-out-symbolic",
+        "view-hidden": "view-conceal-symbolic",
+        "view-calendar": "x-office-calendar-symbolic",
     })
 
     function icon(name: string): string {

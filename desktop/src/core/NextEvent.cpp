@@ -8,7 +8,8 @@ QList<NextEventResult> findUpcomingEvents(const QList<TimetableEvent> &events,
                                            const QDateTime &now,
                                            const QSet<QString> &hiddenGroupKeys,
                                            int count,
-                                           int daysAhead)
+                                           int daysAhead,
+                                           const QSet<QString> &hiddenOccurrenceKeys)
 {
     const int nowMinutes = now.time().hour() * 60 + now.time().minute();
     QList<NextEventResult> result;
@@ -26,7 +27,7 @@ QList<NextEventResult> findUpcomingEvents(const QList<TimetableEvent> &events,
         for (const auto &event : events) {
             if (event.day != weekday)
                 continue;
-            if (hiddenGroupKeys.contains(event.groupKey()))
+            if (event.isHiddenOn(date, hiddenGroupKeys, hiddenOccurrenceKeys))
                 continue;
             if (!(offset > 0 || event.endMinutes > nowMinutes))
                 continue;
@@ -48,9 +49,10 @@ QList<NextEventResult> findUpcomingEvents(const QList<TimetableEvent> &events,
 std::optional<NextEventResult> findNextEvent(const QList<TimetableEvent> &events,
                                               const QDateTime &now,
                                               const QSet<QString> &hiddenGroupKeys,
-                                              int daysAhead)
+                                              int daysAhead,
+                                              const QSet<QString> &hiddenOccurrenceKeys)
 {
-    auto results = findUpcomingEvents(events, now, hiddenGroupKeys, 1, daysAhead);
+    auto results = findUpcomingEvents(events, now, hiddenGroupKeys, 1, daysAhead, hiddenOccurrenceKeys);
     if (results.isEmpty())
         return std::nullopt;
     return results.first();

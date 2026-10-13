@@ -75,10 +75,14 @@ PrefPage {
     QtObject {
         id: hiddenGroupsHolder
         property var list: timetableController.hiddenGroups()
+        property var occurrences: timetableController.hiddenOccurrences()
     }
     Connections {
         target: timetableController
-        function onWeekEventsChanged() { hiddenGroupsHolder.list = timetableController.hiddenGroups() }
+        function onWeekEventsChanged() {
+            hiddenGroupsHolder.list = timetableController.hiddenGroups()
+            hiddenGroupsHolder.occurrences = timetableController.hiddenOccurrences()
+        }
     }
 
     PrefGroup {
@@ -98,6 +102,50 @@ PrefPage {
                 Controls.Button {
                     text: qsTr("Einblenden")
                     onClicked: timetableController.hideGroup(modelData.groupKey, false)
+                }
+            }
+        }
+    }
+
+    // Single lectures hidden on specific dates, one group per weekly slot.
+    PrefGroup {
+        title: qsTr("Ausgeblendete Einzeltermine")
+        visible: occurrenceRepeater.count > 0
+
+        Repeater {
+            id: occurrenceRepeater
+            model: hiddenGroupsHolder.occurrences
+            delegate: ColumnLayout {
+                id: slotDelegate
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: 0
+
+                PrefRow {
+                    first: true
+                    last: slotDelegate.modelData.dates.length === 0
+                    text: slotDelegate.modelData.title
+                    subtitle: slotDelegate.modelData.subtitle
+
+                    Controls.Button {
+                        visible: slotDelegate.modelData.dates.length > 1
+                        text: qsTr("Alle einblenden")
+                        onClicked: timetableController.updateHiddenOccurrences([], slotDelegate.modelData.keys)
+                    }
+                }
+                Repeater {
+                    model: slotDelegate.modelData.dates
+                    delegate: PrefRow {
+                        required property var modelData
+                        required property int index
+                        last: index === slotDelegate.modelData.dates.length - 1
+                        text: modelData.label
+
+                        Controls.Button {
+                            text: qsTr("Einblenden")
+                            onClicked: timetableController.updateHiddenOccurrences([], [modelData.key])
+                        }
+                    }
                 }
             }
         }

@@ -8,6 +8,8 @@
 #include "core/TimetableCache.h"
 
 #include <QDateTime>
+#include <QLocale>
+#include <QMap>
 #include <algorithm>
 
 namespace stundenplan {
@@ -24,9 +26,11 @@ QVariantMap studiengangToVariant(const Studiengang &s)
     return m;
 }
 
-QVariantMap eventToVariant(const TimetableEvent &e, int column = 0, int columnCount = 1)
+QVariantMap eventToVariant(const TimetableEvent &e, const QDate &date, int column = 0, int columnCount = 1)
 {
     QVariantMap m;
+    m[QStringLiteral("date")] = date;
+    m[QStringLiteral("occurrenceKey")] = e.occurrenceKey(date);
     m[QStringLiteral("day")] = weekdayQtDayOfWeek(e.day);
     m[QStringLiteral("dayLabel")] = weekdayGermanLabel(e.day);
     m[QStringLiteral("title")] = e.title;
@@ -182,12 +186,90 @@ bool TimetableController::isFavorite(const QString &code, const QString &abstgvn
 void TimetableController::hideGroup(const QString &groupKey, bool hidden)
 {
     m_settings->setHidden(groupKey, hidden);
-    Q_EMIT weekEventsChanged();
+    rebuildWeekEvents();
 }
 
 bool TimetableController::isGroupHidden(const QString &groupKey) const
 {
     return m_settings->hiddenEventKeys().contains(groupKey);
+}
+
+QVariantList TimetableController::occurrenceChoices(const QVariantMap &event) const
+{
+    const QString groupKey = event.value(QStringLiteral("groupKey")).toString();
+    const int startMinutes = event.value(QStringLiteral("startMinutes")).toInt();
+    const int qtDay = event.value(QStringLiteral("day")).toInt();
+    const QDate around = event.value(QStringLiteral("date")).toDate();
+    QVariantList result;
+    for (const auto &e : m_events) {
+        if (e.groupKey() != groupKey || e.startMinutes != startMinutes || weekdayQtDayOfWeek(e.day) != qtDay)
+            continue;
+        const auto hidden = m_settings->hiddenOccurrenceKeys();
+        const QLocale german(QLocale::German);
+        for (const QDate &date : e.candidateDates(around, QDate::currentDate())) {
+            QVariantMap m;
+            m[QStringLiteral("date")] = date;
+            m[QStringLiteral("label")] = german.toString(date, QStringLiteral("ddd dd.MM.yyyy"));
+            m[QStringLiteral("key")] = e.occurrenceKey(date);
+            m[QStringLiteral("hidden")] = hidden.contains(e.occurrenceKey(date));
+            m[QStringLiteral("current")] = date == around;
+            result.append(m);
+        }
+        break;
+    }
+    return result;
+}
+
+void TimetableController::updateHiddenOccurrences(const QStringList &hide, const QStringList &show)
+{
+    m_settings->updateHiddenOccurrences(hide, show);
+    rebuildWeekEvents();
+}
+
+QVariantList TimetableController::hiddenOccurrences() const
+{
+    // Grouped per weekly slot (groupKey + start time), dates sorted.
+    QMap<QPair<QString, int>, QList<QPair<QDate, QString>>> bySlot;
+    for (const auto &key : m_settings->hiddenOccurrenceKeys()) {
+        const QDate date = QDate::fromString(key.section(QLatin1Char('@'), 0, 0), Qt::ISODate);
+        bool ok = false;
+        const int minutes = key.section(QLatin1Char('@'), 1, 1).toInt(&ok);
+        if (!date.isValid() || !ok)
+            continue;
+        bySlot[{key.section(QLatin1Char('@'), 2), minutes}].append({date, key});
+    }
+    const QLocale german(QLocale::German);
+    QVariantList result;
+    for (auto it = bySlot.begin(); it != bySlot.end(); ++it) {
+        auto entries = it.value();
+        std::sort(entries.begin(), entries.end());
+        QVariantList dates;
+        QStringList keys;
+        for (const auto &[date, key] : entries) {
+            QVariantMap d;
+            d[QStringLiteral("key")] = key;
+            d[QStringLiteral("label")] = german.toString(date, QStringLiteral("ddd dd.MM.yyyy"));
+            dates.append(d);
+            keys.append(key);
+        }
+        const QString groupKey = it.key().first;
+        const int minutes = it.key().second;
+        QVariantMap m;
+        m[QStringLiteral("title")] = groupKey.section(QLatin1Char('|'), 0, 0);
+        m[QStringLiteral("subtitle")] = QStringLiteral("%1 · %2:%3")
+                                             .arg(groupKey.section(QLatin1Char('|'), 1))
+                                             .arg(minutes / 60, 2, 10, QLatin1Char('0'))
+                                             .arg(minutes % 60, 2, 10, QLatin1Char('0'));
+        m[QStringLiteral("keys")] = keys;
+        m[QStringLiteral("dates")] = dates;
+        result.append(m);
+    }
+    return result;
+}
+
+QDate TimetableController::dateOf(const TimetableEvent &event) const
+{
+    return m_weekMonday.addDays(weekdayQtDayOfWeek(event.day) - 1);
 }
 
 QVariantList TimetableController::hiddenGroups() const
@@ -218,13 +300,18 @@ void TimetableController::applyEvents(const QList<TimetableEvent> &events, bool 
         m_cacheTimestamp = QDateTime::currentMSecsSinceEpoch();
         Q_EMIT cacheTimestampChanged();
     }
+    rebuildWeekEvents();
+}
 
+void TimetableController::rebuildWeekEvents()
+{
     const auto hidden = m_settings->hiddenEventKeys();
+    const auto hiddenOccurrences = m_settings->hiddenOccurrenceKeys();
     m_weekEvents.clear();
     for (const auto &e : m_events) {
-        if (hidden.contains(e.groupKey()))
+        if (e.isHiddenOn(dateOf(e), hidden, hiddenOccurrences))
             continue;
-        m_weekEvents.append(eventToVariant(e));
+        m_weekEvents.append(eventToVariant(e, dateOf(e)));
     }
     Q_EMIT weekEventsChanged();
 }
@@ -232,15 +319,16 @@ void TimetableController::applyEvents(const QList<TimetableEvent> &events, bool 
 QVariantList TimetableController::eventsForDay(int qtDayOfWeek) const
 {
     const auto hidden = m_settings->hiddenEventKeys();
+    const auto hiddenOccurrences = m_settings->hiddenOccurrenceKeys();
     QList<TimetableEvent> dayEvents;
     for (const auto &e : m_events) {
-        if (weekdayQtDayOfWeek(e.day) == qtDayOfWeek && !hidden.contains(e.groupKey()))
+        if (weekdayQtDayOfWeek(e.day) == qtDayOfWeek && !e.isHiddenOn(dateOf(e), hidden, hiddenOccurrences))
             dayEvents.append(e);
     }
     const auto overlapSlots = layoutOverlaps(dayEvents);
     QVariantList result;
     for (const auto &slot : overlapSlots)
-        result.append(eventToVariant(slot.event, slot.column, slot.columnCount));
+        result.append(eventToVariant(slot.event, dateOf(slot.event), slot.column, slot.columnCount));
     return result;
 }
 
@@ -251,12 +339,13 @@ QVariantList TimetableController::searchEvents(const QString &query) const
         return result;
     const QString needle = query.trimmed();
     const auto hidden = m_settings->hiddenEventKeys();
+    const auto hiddenOccurrences = m_settings->hiddenOccurrenceKeys();
     for (const auto &e : m_events) {
-        if (hidden.contains(e.groupKey()))
+        if (e.isHiddenOn(dateOf(e), hidden, hiddenOccurrences))
             continue;
         if (e.room.contains(needle, Qt::CaseInsensitive) || e.lecturer.contains(needle, Qt::CaseInsensitive)
             || e.title.contains(needle, Qt::CaseInsensitive)) {
-            result.append(eventToVariant(e));
+            result.append(eventToVariant(e, dateOf(e)));
         }
     }
     return result;
@@ -269,11 +358,10 @@ QVariantMap TimetableController::nextEventToday() const
     // only ever looks at "today".
     const auto hidden = m_settings->hiddenEventKeys();
     QSet<QString> hiddenSet(hidden.begin(), hidden.end());
-    auto next = findNextEvent(m_events, QDateTime::currentDateTime(), hiddenSet, 0);
+    auto next = findNextEvent(m_events, QDateTime::currentDateTime(), hiddenSet, 0, m_settings->hiddenOccurrenceKeys());
     if (!next.has_value())
         return {};
-    QVariantMap m = eventToVariant(next->event);
-    m[QStringLiteral("date")] = next->date;
+    QVariantMap m = eventToVariant(next->event, next->date);
     return m;
 }
 

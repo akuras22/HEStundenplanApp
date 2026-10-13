@@ -10,6 +10,9 @@ AppSheet {
 
     property var eventData: ({})
 
+    /** "Termine auswählen…" — PlanPage opens HideDatesSheet for this event. */
+    signal pickDatesRequested(var eventData)
+
     title: root.eventData.title || ""
 
     ColumnLayout {
@@ -19,7 +22,8 @@ AppSheet {
         Kirigami.FormLayout {
             Controls.Label {
                 Kirigami.FormData.label: qsTr("Tag:")
-                text: root.eventData.dayLabel || ""
+                text: (root.eventData.dayLabel || "")
+                      + (root.eventData.date ? ", " + Qt.formatDate(root.eventData.date, "dd.MM.yyyy") : "")
             }
             Controls.Label {
                 Kirigami.FormData.label: qsTr("Zeit:")
@@ -99,6 +103,38 @@ AppSheet {
         }
 
         Kirigami.Separator { Layout.fillWidth: true }
+
+        Controls.Label {
+            Layout.fillWidth: true
+            text: qsTr("Ausblenden")
+            font.bold: true
+        }
+        // Just this lecture on this date (e.g. "Keine Vorlesung" in the Vorlesungskalender), a
+        // hand-picked set of dates of this slot, or — the switch below — the whole group for good.
+        RowLayout {
+            Layout.fillWidth: true
+            Controls.Button {
+                Layout.fillWidth: true
+                enabled: !!root.eventData.occurrenceKey
+                icon.name: AppTheme.icon("view-hidden")
+                text: qsTr("Nur diesen Termin")
+                onClicked: {
+                    timetableController.updateHiddenOccurrences([root.eventData.occurrenceKey], [])
+                    root.close()
+                }
+            }
+            Controls.Button {
+                Layout.fillWidth: true
+                enabled: !!root.eventData.occurrenceKey
+                icon.name: AppTheme.icon("view-calendar")
+                text: qsTr("Termine auswählen…")
+                onClicked: {
+                    const data = root.eventData
+                    root.close()
+                    root.pickDatesRequested(data)
+                }
+            }
+        }
 
         RowLayout {
             Layout.fillWidth: true

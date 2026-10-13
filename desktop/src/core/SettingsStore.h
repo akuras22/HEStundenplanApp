@@ -46,6 +46,11 @@ public:
     QSet<QString> hiddenEventKeys() const;
     Q_INVOKABLE void setHidden(const QString &groupKey, bool hidden);
 
+    /** Single lectures hidden on specific dates (TimetableEvent::occurrenceKey). */
+    QSet<QString> hiddenOccurrenceKeys() const;
+    /** Hides `hide` and un-hides `show` in one write; drops entries over a month old. */
+    void updateHiddenOccurrences(const QStringList &hide, const QStringList &show);
+
     qint64 lastUpdateCheckAt() const;
     void setLastUpdateCheckAt(qint64 msecsSinceEpoch);
 
@@ -94,6 +99,7 @@ Q_SIGNALS:
     void reminderLeadMinutesChanged();
     void favoritesChanged();
     void hiddenEventKeysChanged();
+    void hiddenOccurrenceKeysChanged();
     void selectedStudiengangChanged();
     void mensaLocationIdChanged();
     void runInBackgroundChanged();

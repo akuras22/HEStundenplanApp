@@ -34,10 +34,11 @@ class LectureReminderWorker(context: Context, params: WorkerParameters) : Corout
         }
 
         val hiddenKeys = settingsStore.hiddenEventKeys.first()
+        val hiddenOccurrenceKeys = settingsStore.hiddenOccurrenceKeys.first()
         val leadMinutesSet = settingsStore.reminderLeadMinutes.first()
         val nowMinutes = LocalTime.now().let { it.hour * 60 + it.minute }
         val dateKey = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val dayEvents = events.filter { it.day == weekday && it.groupKey !in hiddenKeys }
+        val dayEvents = events.filter { it.day == weekday && !it.isHiddenOn(today, hiddenKeys, hiddenOccurrenceKeys) }
 
         // Each configured lead time is tracked as its own dedup key ("<groupKey>@<lead>") so e.g. a
         // 30-min heads-up and a 5-min "starting now" nudge for the same lecture both fire once,

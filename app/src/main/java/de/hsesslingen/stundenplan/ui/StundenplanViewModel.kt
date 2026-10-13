@@ -149,6 +149,11 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
     val hiddenGroupKeys: StateFlow<Set<String>> =
         settingsStore.hiddenEventKeys.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
+    /** Single lectures hidden on specific dates — see [HiddenOccurrence]. Filtered in the UI layer
+     *  like [hiddenGroupKeys]. */
+    val hiddenOccurrenceKeys: StateFlow<Set<String>> =
+        settingsStore.hiddenOccurrenceKeys.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     /** Whether lecture-start reminders are turned on — see [LectureReminderWorker]. */
     val remindersEnabled: StateFlow<Boolean> =
         settingsStore.remindersEnabled.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -446,6 +451,10 @@ class StundenplanViewModel(application: Application) : AndroidViewModel(applicat
 
     fun setGroupHidden(groupKey: String, hidden: Boolean) {
         viewModelScope.launch { settingsStore.setHidden(groupKey, hidden) }
+    }
+
+    fun updateHiddenOccurrences(hide: Collection<String>, show: Collection<String>) {
+        viewModelScope.launch { settingsStore.updateHiddenOccurrences(hide, show) }
     }
 
     /** Turns lecture-start reminders on/off. The caller (SettingsScreen) is responsible for

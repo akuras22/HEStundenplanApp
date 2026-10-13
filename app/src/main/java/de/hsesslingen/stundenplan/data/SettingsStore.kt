@@ -57,6 +57,7 @@ class SettingsStore(private val context: Context) {
         val PARALLELID = stringPreferencesKey("studiengang_parallelid")
         val FAVORITES = stringSetPreferencesKey("favorite_studiengaenge")
         val HIDDEN_EVENT_KEYS = stringSetPreferencesKey("hidden_event_keys")
+        val HIDDEN_OCCURRENCE_KEYS = stringSetPreferencesKey("hidden_occurrence_keys")
         val LAST_UPDATE_CHECK_AT = longPreferencesKey("last_update_check_at_millis")
         val REMINDERS_ENABLED = booleanPreferencesKey("reminders_enabled")
         val NOTIFIED_DATE = stringPreferencesKey("notified_date")
@@ -116,6 +117,23 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             val current = prefs[Keys.HIDDEN_EVENT_KEYS] ?: emptySet()
             prefs[Keys.HIDDEN_EVENT_KEYS] = if (hidden) current + groupKey else current - groupKey
+        }
+    }
+
+    /** Single lectures hidden on specific dates (see [HiddenOccurrence]) — e.g. the dates the
+     *  Vorlesungskalender marks "Keine Vorlesung" — as opposed to whole groups above. */
+    val hiddenOccurrenceKeys: Flow<Set<String>> =
+        context.dataStore.data.map { prefs -> prefs[Keys.HIDDEN_OCCURRENCE_KEYS] ?: emptySet() }
+
+    /** Hides [hide] and un-hides [show] (both [HiddenOccurrence.key]s) in one write. Entries more
+     *  than a month in the past are dropped on the way, so the set doesn't grow forever. */
+    suspend fun updateHiddenOccurrences(hide: Collection<String>, show: Collection<String>) {
+        val cutoff = java.time.LocalDate.now().minusMonths(1)
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.HIDDEN_OCCURRENCE_KEYS] ?: emptySet()
+            prefs[Keys.HIDDEN_OCCURRENCE_KEYS] = (current - show.toSet() + hide)
+                .filter { HiddenOccurrence.parse(it)?.date?.isBefore(cutoff) == false }
+                .toSet()
         }
     }
 

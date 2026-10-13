@@ -11,6 +11,7 @@ const char *kConfigFile = "hestundenplanrc";
 const char *kGroupStudiengang = "Studiengang";
 const char *kGroupFavorites = "Favorites";
 const char *kGroupHidden = "HiddenEvents";
+const char *kGroupHiddenOccurrences = "HiddenOccurrences";
 const char *kGroupNotifications = "Notifications";
 const char *kGroupAppearance = "Appearance";
 const char *kGroupMensa = "Mensa";
@@ -112,6 +113,30 @@ void SettingsStore::setHidden(const QString &groupKey, bool hidden)
     g.writeEntry("keys", list);
     g.sync();
     Q_EMIT hiddenEventKeysChanged();
+}
+
+QSet<QString> SettingsStore::hiddenOccurrenceKeys() const
+{
+    auto g = group(QString::fromLatin1(kGroupHiddenOccurrences));
+    const auto list = g.readEntry("keys", QStringList());
+    return QSet<QString>(list.begin(), list.end());
+}
+
+void SettingsStore::updateHiddenOccurrences(const QStringList &hide, const QStringList &show)
+{
+    auto g = group(QString::fromLatin1(kGroupHiddenOccurrences));
+    auto list = g.readEntry("keys", QStringList());
+    const QDate cutoff = QDate::currentDate().addMonths(-1);
+    QStringList result;
+    for (const auto &key : std::as_const(list)) {
+        const QDate date = QDate::fromString(key.section(QLatin1Char('@'), 0, 0), Qt::ISODate);
+        if (!show.contains(key) && !hide.contains(key) && date.isValid() && date >= cutoff)
+            result.append(key);
+    }
+    result.append(hide);
+    g.writeEntry("keys", result);
+    g.sync();
+    Q_EMIT hiddenOccurrenceKeysChanged();
 }
 
 qint64 SettingsStore::lastUpdateCheckAt() const

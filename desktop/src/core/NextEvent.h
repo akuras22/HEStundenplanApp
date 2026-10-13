@@ -19,12 +19,14 @@ QList<NextEventResult> findUpcomingEvents(const QList<TimetableEvent> &events,
                                            const QDateTime &now,
                                            const QSet<QString> &hiddenGroupKeys = {},
                                            int count = 3,
-                                           int daysAhead = 7);
+                                           int daysAhead = 7,
+                                           const QSet<QString> &hiddenOccurrenceKeys = {});
 
 /** Next upcoming event at or after `now` (weekends skipped, in-progress events still count). */
 std::optional<NextEventResult> findNextEvent(const QList<TimetableEvent> &events,
                                               const QDateTime &now,
                                               const QSet<QString> &hiddenGroupKeys = {},
-                                              int daysAhead = 7);
+                                              int daysAhead = 7,
+                                              const QSet<QString> &hiddenOccurrenceKeys = {});
 
 } // namespace stundenplan

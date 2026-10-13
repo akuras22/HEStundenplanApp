@@ -114,6 +114,7 @@ qt_add_qml_module(hestundenplan-desktop
         qml/components/LabelPill.qml
         qml/components/MiniMap.qml
         qml/dialogs/EventDetailSheet.qml
+        qml/dialogs/HideDatesSheet.qml
         qml/dialogs/SearchDialog.qml
         qml/dialogs/UpdateDialog.qml
         qml/dialogs/ChangelogDialog.qml

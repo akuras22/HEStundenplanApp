@@ -90,12 +90,13 @@ class NextLectureWidget : GlanceAppWidget() {
 
         val cache = TimetableCache(context)
         val hiddenKeys = settingsStore.hiddenEventKeys.first()
+        val hiddenOccurrenceKeys = settingsStore.hiddenOccurrenceKeys.first()
         val now = LocalDateTime.now()
         val thisMonday = now.toLocalDate().with(DayOfWeek.MONDAY)
         val nextMonday = thisMonday.plusWeeks(1)
         val events = (cache.get(studiengang, thisMonday)?.events ?: emptyList()) +
             (cache.get(studiengang, nextMonday)?.events ?: emptyList())
-        val upcoming = findUpcomingEvents(events, now, hiddenKeys, count = 3)
+        val upcoming = findUpcomingEvents(events, now, hiddenKeys, count = 3, hiddenOccurrenceKeys = hiddenOccurrenceKeys)
 
         provideContent {
             val isLarge = LocalSize.current.height >= LARGE_WIDGET_SIZE.height

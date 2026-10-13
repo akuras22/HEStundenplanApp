@@ -16,7 +16,8 @@ fun findNextEvent(
     now: LocalDateTime,
     hiddenGroupKeys: Set<String> = emptySet(),
     daysAhead: Int = 7,
-): NextEventResult? = findUpcomingEvents(events, now, hiddenGroupKeys, count = 1, daysAhead = daysAhead).firstOrNull()
+    hiddenOccurrenceKeys: Set<String> = emptySet(),
+): NextEventResult? = findUpcomingEvents(events, now, hiddenGroupKeys, count = 1, daysAhead = daysAhead, hiddenOccurrenceKeys = hiddenOccurrenceKeys).firstOrNull()
 
 /** Like [findNextEvent] but returns up to [count] events in chronological order — used by the
  *  home-screen widget's larger size variant, which has room to show more than just the next one. */
@@ -26,6 +27,7 @@ fun findUpcomingEvents(
     hiddenGroupKeys: Set<String> = emptySet(),
     count: Int = 3,
     daysAhead: Int = 7,
+    hiddenOccurrenceKeys: Set<String> = emptySet(),
 ): List<NextEventResult> {
     val nowMinutes = now.hour * 60 + now.minute
     val result = mutableListOf<NextEventResult>()
@@ -34,7 +36,7 @@ fun findUpcomingEvents(
         val date = now.toLocalDate().plusDays(offset.toLong())
         val weekday = Weekday.fromDate(date) ?: continue
         val dayEvents = events
-            .filter { it.day == weekday && it.groupKey !in hiddenGroupKeys }
+            .filter { it.day == weekday && !it.isHiddenOn(date, hiddenGroupKeys, hiddenOccurrenceKeys) }
             .filter { offset > 0 || it.endMinutes > nowMinutes }
             .sortedBy { it.startMinutes }
         for (event in dayEvents) {

@@ -40,9 +40,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.hsesslingen.stundenplan.data.AccentPreset
+import de.hsesslingen.stundenplan.data.HiddenOccurrence
 import de.hsesslingen.stundenplan.data.ThemeMode
 import de.hsesslingen.stundenplan.ui.StundenplanViewModel
 import de.hsesslingen.stundenplan.ui.theme.PillShape
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
@@ -51,6 +54,7 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
     val customAccentColor by viewModel.customAccentColor.collectAsState()
     val customBackgroundColor by viewModel.customBackgroundColor.collectAsState()
     val hiddenGroupKeys by viewModel.hiddenGroupKeys.collectAsState()
+    val hiddenOccurrenceKeys by viewModel.hiddenOccurrenceKeys.collectAsState()
     val defaultViewIsDay by viewModel.defaultViewIsDay.collectAsState()
     val blockShowTime by viewModel.blockShowTime.collectAsState()
     val blockShowRoom by viewModel.blockShowRoom.collectAsState()
@@ -161,6 +165,14 @@ fun AppearanceScreen(viewModel: StundenplanViewModel, onBack: () -> Unit) {
                     onUnhide = { key -> viewModel.setGroupHidden(key, false) },
                 )
             }
+
+            if (hiddenOccurrenceKeys.isNotEmpty()) {
+                SectionDivider()
+                HiddenOccurrencesSection(
+                    hiddenOccurrenceKeys = hiddenOccurrenceKeys,
+                    onUnhide = { keys -> viewModel.updateHiddenOccurrences(hide = emptyList(), show = keys) },
+                )
+            }
         }
     }
 
@@ -268,6 +280,56 @@ private fun HiddenGroupsSection(hiddenGroupKeys: Set<String>, onUnhide: (String)
                 ) {
                     Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     TextButton(onClick = { onUnhide(key) }) { Text("Einblenden") }
+                }
+            }
+        }
+    }
+}
+
+private val OCCURRENCE_DATE = DateTimeFormatter.ofPattern("EE dd.MM.yy", Locale.GERMAN)
+
+/** Single lectures hidden on specific dates (see HiddenOccurrence), grouped per weekly slot, each
+ *  date individually restorable. */
+@Composable
+private fun HiddenOccurrencesSection(hiddenOccurrenceKeys: Set<String>, onUnhide: (Collection<String>) -> Unit) {
+    val slots = remember(hiddenOccurrenceKeys) {
+        hiddenOccurrenceKeys.mapNotNull(HiddenOccurrence::parse)
+            .groupBy { it.groupKey to it.startMinutes }
+            .toSortedMap(compareBy({ it.first }, { it.second }))
+    }
+    Column(Modifier.fillMaxWidth()) {
+        SectionLabel("Ausgeblendete Einzeltermine")
+        Spacer(Modifier.height(6.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            slots.forEach { (slot, occurrences) ->
+                val (groupKey, startMinutes) = slot
+                val parts = groupKey.split("|", limit = 2)
+                val title = if (parts.size == 2) "${parts[0]} (${parts[1]})" else groupKey
+                val time = "%02d:%02d".format(startMinutes / 60, startMinutes % 60)
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("$title · $time", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        if (occurrences.size > 1) {
+                            TextButton(onClick = { onUnhide(occurrences.map { it.key }) }) { Text("Alle") }
+                        }
+                    }
+                    occurrences.sortedBy { it.date }.forEach { occurrence ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                occurrence.date.format(OCCURRENCE_DATE),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { onUnhide(listOf(occurrence.key)) }) { Text("Einblenden") }
+                        }
+                    }
                 }
             }
         }
